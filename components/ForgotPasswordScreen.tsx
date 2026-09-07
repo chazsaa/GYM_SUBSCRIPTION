@@ -127,7 +127,7 @@ const COLORS = {
   textLight: '#F5F5F5',
   textMuted: '#A0A0A0',
   border: '#2A2A2A',
-  error: '#FF6B6B',
+  error: '#5f0b0b',
 };
 
 const styles = StyleSheet.create({
