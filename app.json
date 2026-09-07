@@ -4,7 +4,6 @@
     "slug": "gym_subscription",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "gymsubscription",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
