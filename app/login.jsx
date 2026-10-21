@@ -1,5 +1,5 @@
 import LoginScreen from '../components/LoginScreen';
 
-export default function Index() {
+export default function Login() {
   return <LoginScreen />;
 }
