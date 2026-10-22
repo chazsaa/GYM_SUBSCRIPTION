@@ -32,7 +32,7 @@ const HomeScreen = () => {
           <View>
             {/* Header */}
             <View style={styles.topBar}>
-              <Image source={require('../assets/image/ourlogo.jpg')} style={styles.logo} />
+              <Image source={require('../assets/image/ourlogo.png')} style={styles.logo} />
               <View style={styles.brandWrap}>
                 <Text style={styles.brand}>GymFit</Text>
                 <Text style={styles.slogan}>Stronger • Healthier • Happier</Text>
