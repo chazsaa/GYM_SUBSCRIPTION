@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { COLORS } from '../theme/colors';
 
 const Logo = () => {

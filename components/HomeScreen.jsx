@@ -1,11 +1,12 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, FlatList, Image, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../context/AuthContext';
-import { bannerImage, subscriptionPlans } from '../data/subscriptionPlans';
-import { COLORS, SHADES } from '../theme/colors';
+import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PlanCard from './PlanCard';
+import { useAuth } from '../context/AuthContext';
+import { subscriptionPlans, bannerImage } from '../data/subscriptionPlans';
+import { COLORS, SHADES } from '../theme/colors';
 
 // The Gym Subscription Home tab. Only logged-in users can reach it.
 const HomeScreen = () => {

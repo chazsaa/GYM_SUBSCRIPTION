@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Screen from './Screen';
 import BackButton from './BackButton';
 import PrimaryButton from './PrimaryButton';
+import { useSubscription } from '../context/SubscriptionContext';
 import { COLORS, SHADES } from '../theme/colors';
 
 const Stat = ({ icon, label, value }) => (
@@ -19,7 +20,8 @@ const Stat = ({ icon, label, value }) => (
 // "id" is the id from the URL. We show it in the "not found" message.
 const PlanDetailsScreen = ({ plan, id }) => {
   const router = useRouter();
-  const [showConfirm, setShowConfirm] = useState(false);
+  const { status } = useSubscription();
+  const busy = status === 'active' || status === 'pending';
 
   // If the id does not match any plan, show a friendly message instead of crashing
   if (!plan) {
@@ -85,7 +87,17 @@ const PlanDetailsScreen = ({ plan, id }) => {
         <Text style={styles.accessText}>{plan.access}</Text>
       </View>
 
-      <PrimaryButton label="SUBSCRIBE NOW" onPress={() => setShowConfirm(true)} />
+      {busy && (
+        <Text style={styles.notice}>
+          {status === 'pending'
+            ? 'You have a membership waiting for payment. Finish or cancel it in the Current tab before choosing another plan.'
+            : 'You already have an active membership. You can subscribe to a new plan after it expires.'}
+        </Text>
+      )}
+      <PrimaryButton
+        label={busy ? 'VIEW CURRENT MEMBERSHIP' : 'SUBSCRIBE NOW'}
+        onPress={() => (busy ? router.navigate('/current') : router.push(`/payment/${plan.id}`))}
+      />
       <TouchableOpacity
         style={styles.outlineButton}
         activeOpacity={0.8}
@@ -94,30 +106,17 @@ const PlanDetailsScreen = ({ plan, id }) => {
         <Text style={styles.outlineText}>Back to Plans</Text>
       </TouchableOpacity>
 
-      {/* Confirmation message (demo only, no real payment) */}
-      <Modal
-        visible={showConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfirm(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Plan selected</Text>
-            <Text style={styles.modalText}>
-              You selected {plan.name} for {plan.price}.{'\n\n'}
-              This is a demo only. No payment was made and no membership was
-              created.
-            </Text>
-            <PrimaryButton label="GOT IT" onPress={() => setShowConfirm(false)} />
-          </View>
-        </View>
-      </Modal>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
+  notice: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
   hero: {
     backgroundColor: SHADES.maroonDeep,
     borderWidth: 1,

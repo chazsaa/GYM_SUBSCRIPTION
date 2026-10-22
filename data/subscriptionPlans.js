@@ -15,6 +15,8 @@ export const bannerImage = require('../assets/image/plans/banner.jpg');
 export const subscriptionPlans = [
   {
     id: 1,
+    days: 1, // used to compute the expiry date
+    amount: 100, // number version of the price
     icon: 'lightning-bolt',
     bestFor: 'First-time visitors',
     name: 'Daily Pass',
@@ -32,6 +34,8 @@ export const subscriptionPlans = [
   },
   {
     id: 2,
+    days: 30, // used to compute the expiry date
+    amount: 1000, // number version of the price
     icon: 'calendar-month',
     bestFor: 'Regular gym-goers',
     name: 'Monthly Membership',
@@ -50,6 +54,8 @@ export const subscriptionPlans = [
   },
   {
     id: 3,
+    days: 90, // used to compute the expiry date
+    amount: 2700, // number version of the price
     icon: 'calendar-range',
     bestFor: 'Building consistency',
     name: '3-Month Membership',
@@ -68,6 +74,8 @@ export const subscriptionPlans = [
   },
   {
     id: 4,
+    days: 180, // used to compute the expiry date
+    amount: 5000, // number version of the price
     icon: 'calendar-star',
     bestFor: 'Long-term goals',
     name: '6-Month Membership',
@@ -86,6 +94,8 @@ export const subscriptionPlans = [
   },
   {
     id: 5,
+    days: 365, // used to compute the expiry date
+    amount: 9000, // number version of the price
     icon: 'trophy',
     bestFor: 'Committed members',
     name: 'Annual Membership',
@@ -112,3 +122,7 @@ export const subscriptionPlans = [
 export const getPlanById = (id) => {
   return subscriptionPlans.find((plan) => String(plan.id) === String(id));
 };
+
+// Format a number as pesos, e.g. 2700 -> "₱2,700".
+export const formatPeso = (amount) =>
+  '₱' + String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, ',');

@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { SubscriptionProvider } from '../context/SubscriptionContext';
 
 // The router shows different screens depending on the login state.
 // Stack.Protected hides screens when "guard" is false. If someone tries to open
@@ -21,6 +22,7 @@ function RootNavigator() {
       <Stack.Protected guard={isLoggedIn}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="details/[id]" />
+        <Stack.Screen name="payment/[id]" />
       </Stack.Protected>
     </Stack>
   );
@@ -29,7 +31,9 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootNavigator />
+      <SubscriptionProvider>
+        <RootNavigator />
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }

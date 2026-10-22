@@ -55,7 +55,7 @@ const RegisterScreen = () => {
       return;
     }
 
-    // Save the demo account (in memory), then go back to Login.
+    // Save the account, then go back to Login.
     // The password is never logged.
     const result = register(fullName, email, password);
     if (!result.ok) {

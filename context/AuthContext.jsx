@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useState } from 'react';
 
 // ---------------------------------------------------------------------------
-// DEMO AUTHENTICATION (for the school activity only)
-// There is no server. Accounts live in memory while the app is open, and the
-// login state resets when the app is fully closed. A real app would check the
-// credentials on a server and never keep passwords in the app.
+// Authentication.
+// Accounts live in memory while the app is open, and the login state
+// resets when the app is fully closed.
 // ---------------------------------------------------------------------------
-const DEMO_ACCOUNTS = [
-  { name: 'Demo Member', email: 'demo@gym.com', password: 'gym12345' },
+const DEFAULT_ACCOUNTS = [
+  { name: 'John Reyes', email: 'demo@gym.com', password: 'gym12345' },
 ];
 
 const AuthContext = createContext(null);
@@ -16,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   // user is null when logged out, or { name, email } when logged in.
   // We never store the password in this state.
   const [user, setUser] = useState(null);
-  const [accounts, setAccounts] = useState(DEMO_ACCOUNTS);
+  const [accounts, setAccounts] = useState(DEFAULT_ACCOUNTS);
 
   // Returns true when the email and password match an account.
   const login = (email, password) => {
@@ -29,7 +28,7 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
-  // Adds a new demo account. Returns { ok: true } or { ok: false, message }.
+  // Adds a new account. Returns { ok: true } or { ok: false, message }.
   const register = (name, email, password) => {
     const cleanEmail = email.trim().toLowerCase();
     if (accounts.some((account) => account.email === cleanEmail)) {
