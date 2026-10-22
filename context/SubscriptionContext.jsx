@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 
 // ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@ export const formatDate = (iso) => {
 export const getStatus = (subscription) => {
   if (!subscription) return 'none';
   if (subscription.status === 'pending') return 'pending';
-  return new Date() > new Date(subscription.endDate) ? 'expired' : 'active';
+  return new Date() >= new Date(subscription.endDate) ? 'expired' : 'active';
 };
 
 const SubscriptionContext = createContext(null);
@@ -31,6 +31,15 @@ const SubscriptionContext = createContext(null);
 export const SubscriptionProvider = ({ children }) => {
   const { user } = useAuth();
   const [byUser, setByUser] = useState({});
+  const [, setTimeCheck] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeCheck((previous) => previous + 1);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
   const key = user?.email || '';
   const data = byUser[key] || { subscription: null, payments: [] };
   const status = getStatus(data.subscription);
