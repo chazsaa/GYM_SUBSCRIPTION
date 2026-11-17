@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import TabScreen from '../../components/TabScreen';
 import PrimaryButton from '../../components/PrimaryButton';
@@ -9,6 +10,7 @@ import { COLORS, SHADES } from '../../theme/colors';
 
 export default function Profile() {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const [confirmLogout, setConfirmLogout] = useState(false);
   return (
     <TabScreen title="Profile">
@@ -19,6 +21,17 @@ export default function Profile() {
         <Text style={styles.name}>{user?.name || 'Member'}</Text>
         <Text style={styles.email}>{user?.email}</Text>
       </View>
+
+      <Pressable style={styles.editBtn} onPress={() => router.push('/edit-profile')}>
+        <MaterialCommunityIcons name="pencil" size={18} color={COLORS.text} />
+        <Text style={styles.editText}>Edit profile</Text>
+      </Pressable>
+
+      <Pressable style={styles.editBtn} onPress={() => router.push('/change-password')}>
+        <MaterialCommunityIcons name="lock-outline" size={18} color={COLORS.text} />
+        <Text style={styles.editText}>Change password</Text>
+      </Pressable>
+
       <PrimaryButton label="LOG OUT" onPress={() => setConfirmLogout(true)} />
 
       <ConfirmDialog
@@ -45,7 +58,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 18,
     padding: 28,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   avatar: {
     width: 84,
@@ -60,4 +73,16 @@ const styles = StyleSheet.create({
   },
   name: { color: COLORS.text, fontSize: 22, fontWeight: '800' },
   email: { color: COLORS.textMuted, fontSize: 14, marginTop: 4 },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 999,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  editText: { color: COLORS.text, fontSize: 16, fontWeight: '600' },
 });
