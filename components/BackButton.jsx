@@ -23,6 +23,8 @@ const BackButton = ({ fallback = '/' }) => {
       activeOpacity={0.7}
       onPress={handleBack}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
     >
       <Text style={styles.arrow}>‹</Text>
       <Text style={styles.label}>Back</Text>
@@ -35,7 +37,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginBottom: 20,
+    minHeight: 44,
+    marginBottom: 12,
   },
   arrow: {
     color: COLORS.accent,

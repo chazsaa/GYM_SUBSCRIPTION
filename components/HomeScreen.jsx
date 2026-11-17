@@ -1,17 +1,23 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PlanCard from './PlanCard';
+import ConfirmDialog from './ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
-import { subscriptionPlans, bannerImage } from '../data/subscriptionPlans';
+import { usePlans } from '../context/PlansContext';
+import { bannerImage } from '../data/subscriptionPlans';
 import { COLORS, SHADES } from '../theme/colors';
+import { BRAND } from '../constants/brand';
 
-// The Gym Subscription Home tab. Only logged-in users can reach it.
+// The GymFit Home tab. Only logged-in users can reach it.
 const HomeScreen = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { plans } = usePlans();
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const firstName = user?.name ? user.name.trim().split(' ')[0] : '';
 
   // Plan id 3 -> opens /details/3 (file: app/details/[id].jsx)
@@ -22,7 +28,7 @@ const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
-        data={subscriptionPlans}
+        data={plans}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <PlanCard plan={item} onViewDetails={() => handleViewDetails(item)} />
@@ -34,8 +40,8 @@ const HomeScreen = () => {
             <View style={styles.topBar}>
               <Image source={require('../assets/image/ourlogo.png')} style={styles.logo} />
               <View style={styles.brandWrap}>
-                <Text style={styles.brand}>GymFit</Text>
-                <Text style={styles.slogan}>Stronger • Healthier • Happier</Text>
+                <Text style={styles.brand}>{BRAND.name}</Text>
+                <Text style={styles.slogan}>{BRAND.slogan}</Text>
               </View>
               <TouchableOpacity
                 style={styles.iconButton}
@@ -46,7 +52,7 @@ const HomeScreen = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconButton}
-                onPress={logout}
+                onPress={() => setConfirmLogout(true)}
                 accessibilityRole="button"
                 accessibilityLabel="Log out"
               >
@@ -63,15 +69,28 @@ const HomeScreen = () => {
                   Choose a membership plan that fits your goals.
                 </Text>
               </View>
-              <Image source={bannerImage} style={styles.bannerPhoto} resizeMode="cover" />
+              <Image source={bannerImage} style={styles.bannerPhoto} contentFit="cover" transition={150} />
             </View>
 
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>Membership Plans</Text>
-              <Text style={styles.sectionCount}>{subscriptionPlans.length} plans</Text>
+              <Text style={styles.sectionCount}>{plans.length} plans</Text>
             </View>
           </View>
         }
+      />
+
+      <ConfirmDialog
+        visible={confirmLogout}
+        title="Log out?"
+        message="You will need to log in again to see your membership."
+        confirmLabel="Log out"
+        destructive
+        onConfirm={() => {
+          setConfirmLogout(false);
+          logout();
+        }}
+        onCancel={() => setConfirmLogout(false)}
       />
     </SafeAreaView>
   );
@@ -85,7 +104,7 @@ const styles = StyleSheet.create({
   brandWrap: { flex: 1 },
   brand: { color: COLORS.text, fontSize: 17, fontWeight: '800' },
   slogan: { color: COLORS.textMuted, fontSize: 11, marginTop: 1 },
-  iconButton: { padding: 6, marginLeft: 2 },
+  iconButton: { padding: 9, marginLeft: 2 },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',

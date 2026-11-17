@@ -4,7 +4,7 @@ export const COLORS = {
   background: '#0D0D0D',
   cardBackground: '#1A1A1A',
   primary: '#8B0000', // dark maroon (buttons, badges, borders)
-  accent: '#B22222', // red (links, checkmarks)
+  accent: '#E85D5D', // light red for links, icons and checkmarks (5:1 or better on every dark surface)
   text: '#F5F5F5', // main text
   textMuted: '#A0A0A0', // secondary text
   placeholderMuted: '#8A8A8A',

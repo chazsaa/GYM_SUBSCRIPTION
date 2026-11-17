@@ -5,7 +5,6 @@ import TabScreen from './TabScreen';
 import PrimaryButton from './PrimaryButton';
 import { COLORS, SHADES } from '../theme/colors';
 
-// Simple "nothing here yet" screen used by Current and History.
 const InfoScreen = ({ title, icon, heading, text, buttonLabel, onPress }) => (
   <TabScreen title={title}>
     <View style={styles.card}>

@@ -9,6 +9,9 @@ const PrimaryButton = ({ label, onPress, disabled }) => {
       activeOpacity={0.85}
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
     >
       <Text style={styles.buttonText}>{label}</Text>
     </TouchableOpacity>

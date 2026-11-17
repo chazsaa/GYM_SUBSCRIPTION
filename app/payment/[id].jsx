@@ -1,9 +1,12 @@
 import { useLocalSearchParams } from 'expo-router';
 import PaymentScreen from '../../components/PaymentScreen';
-import { getPlanById } from '../../data/subscriptionPlans';
+import { usePlans } from '../../context/PlansContext';
 
-// /payment/2 -> pay for plan 2. Same idea as /details/[id].
+// /payment/2                -> subscribe to plan 2
+// /payment/2?mode=renew     -> renew (plan 2 is the plan being renewed)
+// /payment/5?mode=change    -> switch the current membership to plan 5
 export default function Payment() {
-  const { id } = useLocalSearchParams();
-  return <PaymentScreen plan={getPlanById(id)} id={id} />;
+  const { id, mode } = useLocalSearchParams();
+  const { getPlanById } = usePlans();
+  return <PaymentScreen plan={getPlanById(id)} id={id} mode={mode} />;
 }

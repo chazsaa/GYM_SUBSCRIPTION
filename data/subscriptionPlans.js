@@ -4,13 +4,13 @@
 // Photos live in assets/image/plans/. Replace a file with your own photo
 // (same file name) to change the picture everywhere.
 export const planImages = {
-  1: require('../assets/image/plans/plan-1.png'),
-  2: require('../assets/image/plans/plan-2.png'),
-  3: require('../assets/image/plans/plan-3.png'),
-  4: require('../assets/image/plans/plan-4.png'),
-  5: require('../assets/image/plans/plan-5.png'),
+  1: require('../assets/image/plans/plan-1.jpg'),
+  2: require('../assets/image/plans/plan-2.jpg'),
+  3: require('../assets/image/plans/plan-3.jpg'),
+  4: require('../assets/image/plans/plan-4.jpg'),
+  5: require('../assets/image/plans/plan-5.jpg'),
 };
-export const bannerImage = require('../assets/image/plans/banner.png');
+export const bannerImage = require('../assets/image/plans/banner.jpg');
 
 export const subscriptionPlans = [
   {
@@ -126,3 +126,7 @@ export const getPlanById = (id) => {
 // Format a number as pesos, e.g. 2700 -> "₱2,700".
 export const formatPeso = (amount) =>
   '₱' + String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+// The photo for a plan. A plan added later in the database, with no photo yet,
+// shows the banner photo instead.
+export const getPlanImage = (id) => planImages[id] ?? bannerImage;

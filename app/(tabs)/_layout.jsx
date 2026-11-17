@@ -3,11 +3,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SHADES } from '../../theme/colors';
 
-// Bottom navigation: Home, Current, History, Profile.
-// The (tabs) folder name is a "group": it does not appear in the URL,
-// so the Home tab is still "/".
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  
   return (
     <Tabs
       screenOptions={{

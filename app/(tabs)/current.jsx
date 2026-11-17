@@ -1,12 +1,20 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import TabScreen from '../../components/TabScreen';
 import InfoScreen from '../../components/InfoScreen';
 import PrimaryButton from '../../components/PrimaryButton';
-import { useSubscription, formatDate, PAYMENT_METHODS } from '../../context/SubscriptionContext';
-import { getPlanById, planImages, formatPeso } from '../../data/subscriptionPlans';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import {
+  useSubscription,
+  formatDate,
+  daysLeft,
+  PAYMENT_METHODS,
+} from '../../context/SubscriptionContext';
+import { usePlans } from '../../context/PlansContext';
+import { getPlanImage, formatPeso } from '../../data/subscriptionPlans';
 import { COLORS, SHADES } from '../../theme/colors';
 
 const Fact = ({ icon, label, value }) => (
@@ -19,16 +27,20 @@ const Fact = ({ icon, label, value }) => (
 
 export default function Current() {
   const router = useRouter();
-  const { subscription, status, completePayment, cancelSubscription } = useSubscription();
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const { subscription, status, completePayment, cancelSubscription, changePlan } = useSubscription();
+  const { getPlanById } = usePlans();
   const plan = subscription ? getPlanById(subscription.planId) : null;
+  const nextPlan = subscription?.nextPlanId ? getPlanById(subscription.nextPlanId) : null;
 
-  // No membership (or it expired): invite the user to pick a plan.
-  if (!plan || status === 'none' || status === 'expired') {
+  // No membership: invite the user to pick a plan.
+  if (!plan || status === 'none') {
     return (
       <InfoScreen
         title="Current Subscription"
         icon="card-account-details-outline"
-        heading={status === 'expired' ? 'Your membership has expired' : 'No active membership yet'}
+        heading="No active membership yet"
         text="Choose a plan on the Home tab, then pay to activate it. Your membership will show up here."
         buttonLabel="BROWSE PLANS"
         onPress={() => router.navigate('/')}
@@ -37,15 +49,34 @@ export default function Current() {
   }
 
   const pending = status === 'pending';
+  const expired = status === 'expired';
+  const active = status === 'active';
+  // A renewal uses the scheduled plan if there is one.
+  const renewPlan = nextPlan ?? plan;
+
+  const run = async (action) => {
+    setActionError('');
+    const res = await action();
+    if (!res.ok) setActionError(res.message || 'Something went wrong. Please try again.');
+  };
+
+  let badgeText = 'ACTIVE';
+  if (pending) badgeText = 'PENDING PAYMENT';
+  if (expired) badgeText = 'EXPIRED';
 
   return (
     <TabScreen title="Current Subscription">
       <View style={styles.card}>
         <View style={styles.topRow}>
-          <Image source={planImages[plan.id]} style={styles.photo} />
+          <Image source={getPlanImage(plan.id)} style={styles.photo} contentFit="cover" transition={150} />
           <View style={{ flex: 1 }}>
-            <View style={[styles.badge, pending ? styles.badgePending : styles.badgeActive]}>
-              <Text style={styles.badgeText}>{pending ? 'PENDING PAYMENT' : 'ACTIVE'}</Text>
+            <View
+              style={[
+                styles.badge,
+                pending ? styles.badgePending : expired ? styles.badgeExpired : styles.badgeActive,
+              ]}
+            >
+              <Text style={styles.badgeText}>{badgeText}</Text>
             </View>
             <Text style={styles.name}>{plan.name}</Text>
             <Text style={styles.price}>
@@ -56,13 +87,30 @@ export default function Current() {
 
         <View style={styles.facts}>
           <Fact icon="calendar-start" label="Start date" value={pending ? 'After payment' : formatDate(subscription.startDate)} />
-          <Fact icon="calendar-end" label="Expires" value={pending ? '-' : formatDate(subscription.endDate)} />
+          <Fact
+            icon="calendar-end"
+            label={expired ? 'Expired' : 'Expires'}
+            value={pending ? '-' : formatDate(subscription.endDate)}
+          />
           <Fact icon="cash" label="Payment" value={pending ? 'Unpaid' : PAYMENT_METHODS[subscription.method]} />
         </View>
 
         {pending && (
           <Text style={styles.notice}>
             Your spot is reserved, but the membership is not active until {formatPeso(plan.amount)} is paid.
+          </Text>
+        )}
+        {active && (
+          <Text style={styles.notice}>
+            {daysLeft(subscription.endDate)} day{daysLeft(subscription.endDate) === 1 ? '' : 's'} left.
+            {nextPlan
+              ? ` Your plan changes to ${nextPlan.name} when this membership ends. Renewing will charge ${nextPlan.price}.`
+              : ''}
+          </Text>
+        )}
+        {expired && (
+          <Text style={styles.notice}>
+            Your membership has ended. Renew to start again, or choose a different plan.
           </Text>
         )}
       </View>
@@ -79,17 +127,58 @@ export default function Current() {
       {pending && (
         <>
           <PrimaryButton label={`PAY ${plan.price} ONLINE`} onPress={() => router.push(`/payment/${plan.id}`)} />
-          <TouchableOpacity style={styles.outline} onPress={() => completePayment('gym')}>
+          <TouchableOpacity style={styles.outline} onPress={() => run(() => completePayment('gym'))}>
             <Text style={styles.outlineText}>I paid at the front desk</Text>
           </TouchableOpacity>
         </>
       )}
+      {(active || expired) && (
+        <PrimaryButton
+          label={expired ? `RENEW - PAY ${renewPlan.price}` : 'RENEW MEMBERSHIP'}
+          onPress={() => router.push(`/payment/${renewPlan.id}?mode=renew`)}
+        />
+      )}
+      {(active || expired) && (
+        <TouchableOpacity style={styles.outline} onPress={() => router.navigate('/')}>
+          <Text style={styles.outlineText}>{expired ? 'Choose a different plan' : 'Change plan'}</Text>
+        </TouchableOpacity>
+      )}
+      {active && nextPlan && (
+        <TouchableOpacity style={styles.outline} onPress={() => run(() => changePlan(plan.id, null))}>
+          <Text style={styles.outlineText}>Keep {plan.name} (cancel plan change)</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity style={styles.outline} onPress={() => router.navigate('/history')}>
         <Text style={styles.outlineText}>View Payment History</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.cancel} onPress={cancelSubscription}>
-        <Text style={styles.cancelText}>{pending ? 'Cancel reservation' : 'End membership'}</Text>
-      </TouchableOpacity>
+      {!!actionError && <Text style={styles.error}>{actionError}</Text>}
+      {!expired && (
+        <TouchableOpacity
+          style={styles.cancel}
+          onPress={() => setConfirmEnd(true)}
+          accessibilityRole="button"
+        >
+          <Text style={styles.cancelText}>{pending ? 'Cancel reservation' : 'End membership'}</Text>
+        </TouchableOpacity>
+      )}
+
+      <ConfirmDialog
+        visible={confirmEnd}
+        title={pending ? 'Cancel your reservation?' : 'End your membership?'}
+        message={
+          pending
+            ? 'Your reserved spot will be released. You have not been charged.'
+            : 'Your membership will end now and no refund will be given. This cannot be undone.'
+        }
+        confirmLabel={pending ? 'Cancel reservation' : 'End membership'}
+        cancelLabel="Keep it"
+        destructive
+        onConfirm={() => {
+          setConfirmEnd(false);
+          run(() => cancelSubscription());
+        }}
+        onCancel={() => setConfirmEnd(false)}
+      />
     </TabScreen>
   );
 }
@@ -108,6 +197,8 @@ const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3, marginBottom: 6 },
   badgeActive: { backgroundColor: '#1F6B3A' },
   badgePending: { backgroundColor: '#8A5A00' },
+  badgeExpired: { backgroundColor: '#6B2A2A' },
+  error: { color: COLORS.error ?? '#FF6B6B', fontSize: 14, marginTop: 10, textAlign: 'center' },
   badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   name: { color: COLORS.text, fontSize: 19, fontWeight: '800' },
   price: { color: COLORS.text, fontSize: 18, fontWeight: '800', marginTop: 2 },
@@ -122,6 +213,6 @@ const styles = StyleSheet.create({
   benefitText: { flex: 1, color: COLORS.text, fontSize: 14, marginLeft: 8 },
   outline: { borderWidth: 1.5, borderColor: COLORS.accent, borderRadius: 30, paddingVertical: 13, alignItems: 'center', marginTop: 12 },
   outlineText: { color: COLORS.accent, fontSize: 14, fontWeight: '700' },
-  cancel: { alignItems: 'center', paddingVertical: 16 },
+  cancel: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingVertical: 12 },
   cancelText: { color: COLORS.textMuted, fontSize: 13, textDecorationLine: 'underline' },
 });

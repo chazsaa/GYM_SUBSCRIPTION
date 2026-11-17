@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { planImages } from '../data/subscriptionPlans';
+import { getPlanImage } from '../data/subscriptionPlans';
 import { COLORS } from '../theme/colors';
 
 // One membership card: icon tile, name, price / duration, description,
@@ -15,7 +16,7 @@ const PlanCard = ({ plan, onViewDetails }) => {
   return (
     <View style={styles.card}>
       <View style={styles.row}>
-        <Image source={planImages[plan.id]} style={styles.photo} resizeMode="cover" />
+        <Image source={getPlanImage(plan.id)} style={styles.photo} contentFit="cover" transition={150} />
         <View style={styles.info}>
           <Text style={styles.name}>{plan.name}</Text>
           <Text style={styles.priceLine}>

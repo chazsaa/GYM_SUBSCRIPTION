@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,7 +6,7 @@ import Screen from './Screen';
 import BackButton from './BackButton';
 import PrimaryButton from './PrimaryButton';
 import { formatPeso } from '../data/subscriptionPlans';
-import { useSubscription, PAYMENT_METHODS } from '../context/SubscriptionContext';
+import { useSubscription, PAYMENT_METHODS, formatDate } from '../context/SubscriptionContext';
 import { COLORS, SHADES } from '../theme/colors';
 
 const METHOD_ICONS = { gcash: 'cellphone', maya: 'wallet-outline', card: 'credit-card-outline', gym: 'store-outline' };
@@ -16,65 +16,157 @@ const METHOD_NOTES = {
   card: 'Pay now. Membership starts right away.',
   gym: 'Reserve now, pay at the front desk. Membership starts after payment.',
 };
+const ONLINE_METHODS = ['gcash', 'maya', 'card'];
 
-const PaymentScreen = ({ plan, id }) => {
+// mode: 'new' (subscribe), 'renew' (extend / restart), 'change' (upgrade or downgrade)
+const PaymentScreen = ({ plan, id, mode: modeParam }) => {
+  const mode = modeParam === 'renew' || modeParam === 'change' ? modeParam : 'new';
   const router = useRouter();
-  const { status, subscription, subscribe, completePayment } = useSubscription();
+  const {
+    status,
+    subscription,
+    subscribe,
+    completePayment,
+    renewSubscription,
+    changePlan,
+    quoteChange,
+  } = useSubscription();
   const [method, setMethod] = useState('gcash');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [quoteState, setQuoteState] = useState({ planId: null, quote: null, error: '' });
 
-  if (!plan) {
-    return (
-      <Screen>
-        <BackButton />
-        <Text style={styles.title}>Subscription Not Found</Text>
-        <Text style={styles.muted}>{id ? `No plan has the ID "${id}".` : 'No plan ID was given.'}</Text>
-        <PrimaryButton label="BACK TO HOME" onPress={() => router.replace('/')} />
-      </Screen>
-    );
-  }
+  // For a plan change, ask the database what it would cost before paying.
+  const planId = plan?.id;
+  const wantsQuote = mode === 'change' && status === 'active' && planId != null;
+  useEffect(() => {
+    if (!wantsQuote) return undefined;
+    let cancelled = false;
+    quoteChange(planId).then((res) => {
+      if (!cancelled) {
+        setQuoteState({ planId, quote: res.ok ? res.quote : null, error: res.ok ? '' : res.message });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantsQuote, planId, quoteChange]);
+
+  const notFound = (
+    <Screen>
+      <BackButton />
+      <Text style={styles.title}>Subscription Not Found</Text>
+      <Text style={styles.muted}>{id ? `No plan has the ID "${id}".` : 'No plan ID was given.'}</Text>
+      <PrimaryButton label="BACK TO HOME" onPress={() => router.replace('/')} />
+    </Screen>
+  );
+  if (!plan) return notFound;
+
+  const blockedScreen = (heading, text, label = 'VIEW CURRENT MEMBERSHIP') => (
+    <Screen>
+      <BackButton />
+      <Text style={styles.title}>{heading}</Text>
+      <Text style={styles.muted}>{text}</Text>
+      <PrimaryButton label={label} onPress={() => router.navigate('/current')} />
+    </Screen>
+  );
 
   // Finishing a pending payment is allowed only for the same plan.
-  const completing = status === 'pending' && subscription?.planId === plan.id;
-  const blocked = (status === 'pending' || status === 'active') && !completing;
+  const completing = mode === 'new' && status === 'pending' && subscription?.planId === plan.id;
+  if (mode === 'new' && (status === 'pending' || status === 'active') && !completing) {
+    return blockedScreen(
+      'Membership already in progress',
+      'You already have a pending or active membership. See it in the Current tab.'
+    );
+  }
+  if (mode === 'renew' && status !== 'active' && status !== 'expired') {
+    return blockedScreen('Nothing to renew', 'You have no membership to renew. Choose a plan on the Home tab.', 'BROWSE PLANS');
+  }
+  if (mode === 'change' && status !== 'active') {
+    return blockedScreen('Plan change not available', 'You need an active membership to change plans.');
+  }
 
-  if (blocked) {
+  // ----- plan change: wait for the quote
+  const quoteReady = quoteState.planId === plan.id;
+  const quote = mode === 'change' && quoteReady ? quoteState.quote : null;
+  const quoteError = mode === 'change' && quoteReady ? quoteState.error : '';
+  if (mode === 'change' && !quote) {
     return (
       <Screen>
         <BackButton />
-        <Text style={styles.title}>Membership already in progress</Text>
-        <Text style={styles.muted}>
-          You already have a pending or active membership. See it in the Current tab.
-        </Text>
-        <PrimaryButton label="VIEW CURRENT MEMBERSHIP" onPress={() => router.navigate('/current')} />
+        <Text style={styles.title}>Change Plan</Text>
+        <Text style={styles.muted}>{quoteError || 'Checking your plan change...'}</Text>
+        {!!quoteError && <PrimaryButton label="VIEW CURRENT MEMBERSHIP" onPress={() => router.navigate('/current')} />}
       </Screen>
     );
   }
 
-  const methods = completing ? ['gcash', 'maya', 'card'] : Object.keys(PAYMENT_METHODS);
-  const payNow = method !== 'gym';
+  if (quote?.kind === 'clear') {
+    return blockedScreen(
+      'This is your current plan',
+      'To cancel a scheduled plan change, use "Keep ... (cancel plan change)" in the Current tab.'
+    );
+  }
 
-  const handlePay = () => {
+  const isUpgrade = quote?.kind === 'upgrade';
+  const isDowngrade = quote?.kind === 'downgrade';
+  const total = isUpgrade ? quote.charge : plan.amount;
+  const methods = isDowngrade
+    ? []
+    : completing || mode !== 'new'
+      ? ONLINE_METHODS
+      : Object.keys(PAYMENT_METHODS);
+  const payNow = isDowngrade ? false : method !== 'gym' || mode !== 'new';
+
+  const handlePay = async () => {
+    if (processing) return;
     setProcessing(true);
-    // Short processing delay before the payment is recorded.
-    setTimeout(() => {
-      const res = completing ? completePayment(method) : subscribe(plan, method);
-      setProcessing(false);
-      if (res.ok) {
-        setResult(
-          res.pending
-            ? {
-                title: 'Membership reserved',
-                text: `${plan.name} is waiting for payment. Pay ${formatPeso(plan.amount)} at the gym front desk to activate it.`,
-              }
-            : {
-                title: 'Payment received',
-                text: `${plan.name} is now active. Enjoy your workouts!`,
-              }
-        );
-      }
-    }, 1000);
+    setErrorMessage('');
+    // Payments are still simulated (real payments come in Phase 3),
+    // so a short delay stands in for the payment provider.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    let res;
+    if (mode === 'renew') res = await renewSubscription(method);
+    else if (mode === 'change') res = await changePlan(plan.id, isDowngrade ? null : method);
+    else if (completing) res = await completePayment(method);
+    else res = await subscribe(plan, method);
+    setProcessing(false);
+    if (!res.ok) {
+      setErrorMessage(res.message || 'Something went wrong. Please try again.');
+      return;
+    }
+    if (mode === 'renew') {
+      setResult({
+        title: 'Membership renewed',
+        text:
+          res.data?.result === 'restarted'
+            ? `${plan.name} has started again and runs until ${formatDate(res.data?.ends)}.`
+            : `${plan.name} now runs until ${formatDate(res.data?.ends)}.`,
+      });
+    } else if (mode === 'change') {
+      setResult(
+        isDowngrade
+          ? {
+              title: 'Plan change scheduled',
+              text: `You will move to ${plan.name} on ${formatDate(quote.effective)}. Nothing was charged.`,
+            }
+          : {
+              title: 'Plan upgraded',
+              text: `${plan.name} is now active and runs until ${formatDate(res.data?.ends)}.`,
+            }
+      );
+    } else if (res.pending) {
+      setResult({
+        title: 'Membership reserved',
+        text: `${plan.name} is waiting for payment. Pay ${formatPeso(plan.amount)} at the gym front desk to activate it.`,
+      });
+    } else {
+      setResult({
+        title: 'Payment received',
+        text: `${plan.name} is now active. Enjoy your workouts!`,
+      });
+    }
   };
 
   const goToCurrent = () => {
@@ -83,10 +175,25 @@ const PaymentScreen = ({ plan, id }) => {
     router.navigate('/current');
   };
 
+  const title =
+    mode === 'renew'
+      ? 'Renew Membership'
+      : mode === 'change'
+        ? isDowngrade
+          ? 'Downgrade Plan'
+          : 'Upgrade Plan'
+        : completing
+          ? 'Complete Payment'
+          : 'Payment';
+
+  let buttonLabel = `PAY ${formatPeso(total)}`;
+  if (isDowngrade) buttonLabel = 'SCHEDULE PLAN CHANGE';
+  else if (!payNow) buttonLabel = 'RESERVE - PAY AT THE GYM';
+
   return (
     <Screen>
       <BackButton />
-      <Text style={styles.title}>{completing ? 'Complete Payment' : 'Payment'}</Text>
+      <Text style={styles.title}>{title}</Text>
 
       <View style={styles.summary}>
         <View style={{ flex: 1 }}>
@@ -96,7 +203,40 @@ const PaymentScreen = ({ plan, id }) => {
         <Text style={styles.amount}>{plan.price}</Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Payment method</Text>
+      {isUpgrade && (
+        <View style={styles.breakdown}>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>{plan.name}</Text>
+            <Text style={styles.breakdownValue}>{formatPeso(quote.new_amount)}</Text>
+          </View>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>Credit for the unused days of your current plan</Text>
+            <Text style={styles.breakdownValue}>-{formatPeso(quote.credit)}</Text>
+          </View>
+          <Text style={styles.infoText}>
+            The new plan starts now and runs until {formatDate(quote.ends)}.
+          </Text>
+        </View>
+      )}
+      {isDowngrade && (
+        <View style={styles.breakdown}>
+          <Text style={styles.infoText}>
+            Your current plan keeps running until {formatDate(quote.effective)}. After that, your next
+            renewal will be {plan.name} at {plan.price}. Nothing is charged now.
+          </Text>
+        </View>
+      )}
+      {mode === 'renew' && (
+        <View style={styles.breakdown}>
+          <Text style={styles.infoText}>
+            {status === 'active'
+              ? `Renewing adds ${plan.duration} to the end of your current membership.`
+              : 'Your membership has expired. Renewing starts it again from today.'}
+          </Text>
+        </View>
+      )}
+
+      {methods.length > 0 && <Text style={styles.sectionTitle}>Payment method</Text>}
       {methods.map((m) => {
         const selected = method === m;
         return (
@@ -123,13 +263,14 @@ const PaymentScreen = ({ plan, id }) => {
       })}
 
       <View style={styles.totalRow}>
-        <Text style={styles.totalLabel}>Total</Text>
-        <Text style={styles.totalValue}>{plan.price}</Text>
+        <Text style={styles.totalLabel}>{isDowngrade ? 'Due today' : 'Total'}</Text>
+        <Text style={styles.totalValue}>{isDowngrade ? formatPeso(0) : formatPeso(total)}</Text>
       </View>
       <View style={{ height: 16 }} />
 
+      {!!errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
       <PrimaryButton
-        label={processing ? 'PROCESSING...' : payNow ? `PAY ${plan.price}` : 'RESERVE - PAY AT THE GYM'}
+        label={processing ? 'PROCESSING...' : buttonLabel}
         onPress={handlePay}
         disabled={processing}
       />
@@ -152,6 +293,7 @@ const PaymentScreen = ({ plan, id }) => {
 
 const styles = StyleSheet.create({
   title: { color: COLORS.text, fontSize: 26, fontWeight: '800', marginBottom: 16 },
+  error: { color: COLORS.error ?? '#FF6B6B', fontSize: 14, marginBottom: 10 },
   muted: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginBottom: 24 },
   summary: {
     flexDirection: 'row',
@@ -181,6 +323,18 @@ const styles = StyleSheet.create({
   methodText: { flex: 1, marginHorizontal: 12 },
   methodName: { color: COLORS.text, fontSize: 15, fontWeight: '700' },
   methodNote: { color: COLORS.textMuted, fontSize: 12, marginTop: 2, lineHeight: 16 },
+  breakdown: {
+    backgroundColor: COLORS.cardBackground,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+  },
+  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  breakdownLabel: { color: COLORS.textMuted, fontSize: 14, flex: 1, paddingRight: 12 },
+  breakdownValue: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
+  infoText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 21 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
   totalLabel: { color: COLORS.textMuted, fontSize: 15 },
   totalValue: { color: COLORS.text, fontSize: 20, fontWeight: '800' },

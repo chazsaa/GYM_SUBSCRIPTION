@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { COLORS } from '../theme/colors';
+import { BRAND } from '../constants/brand';
 
 const Logo = () => {
   return (
@@ -8,10 +10,10 @@ const Logo = () => {
       <Image
         source={require('../assets/image/ourlogo.png')}
         style={styles.logoImage}
-        resizeMode="contain"
+        contentFit="contain"
       />
 
-      <Text style={styles.logoText}>GymFit</Text>
+      <Text style={styles.logoText}>{BRAND.name}</Text>
     </View>
   );
 };

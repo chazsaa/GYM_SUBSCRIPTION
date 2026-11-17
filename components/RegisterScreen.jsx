@@ -17,6 +17,8 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(null); // set after a successful sign up
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -25,7 +27,8 @@ const RegisterScreen = () => {
 
   const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
+    if (submitting) return;
     const nextErrors = {};
 
     if (!fullName.trim()) nextErrors.fullName = 'Enter your full name.';
@@ -55,14 +58,17 @@ const RegisterScreen = () => {
       return;
     }
 
-    // Save the account, then go back to Login.
+    // Create the account online. The new member is not logged in automatically:
+    // we show a "Registration complete" screen and they log in themselves.
     // The password is never logged.
-    const result = register(fullName, email, password);
+    setSubmitting(true);
+    const result = await register(fullName, email, password);
+    setSubmitting(false);
     if (!result.ok) {
       setErrors({ email: result.message });
       return;
     }
-    router.back();
+    setDone({ needsConfirmation: result.needsConfirmation });
   };
 
   // Remove the error message of one field when the user edits it
@@ -73,6 +79,21 @@ const RegisterScreen = () => {
   const handleBackToLogin = () => {
     router.back();
   };
+
+  if (done) {
+    return (
+      <Screen>
+        <Logo />
+        <Text style={styles.welcomeTitle}>Registration Complete</Text>
+        <Text style={styles.subtitle}>
+          {done.needsConfirmation
+            ? 'Your account has been created. Check your email for the confirmation link, then log in.'
+            : 'Your account has been created. Log in with your email and password to continue.'}
+        </Text>
+        <PrimaryButton label="GO TO LOGIN" onPress={handleBackToLogin} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -128,7 +149,9 @@ const RegisterScreen = () => {
         rightElement={
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {showPassword ? (
               <EyeOff size={20} color={COLORS.textMuted} />
@@ -154,7 +177,9 @@ const RegisterScreen = () => {
         rightElement={
           <TouchableOpacity
             onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {showConfirmPassword ? (
               <EyeOff size={20} color={COLORS.textMuted} />
@@ -169,6 +194,9 @@ const RegisterScreen = () => {
       <TouchableOpacity
         style={styles.termsRow}
         activeOpacity={0.8}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: agreed }}
+        accessibilityLabel="I agree to the Terms of Service and Privacy Policy"
         onPress={() => {
           setAgreed(!agreed);
           clearError('agreed');
@@ -185,7 +213,11 @@ const RegisterScreen = () => {
       {!!errors.agreed && <Text style={styles.errorText}>{errors.agreed}</Text>}
 
       {/* Sign Up Button */}
-      <PrimaryButton label="SIGN UP" onPress={handleSignUp} />
+      <PrimaryButton
+        label={submitting ? 'CREATING ACCOUNT...' : 'SIGN UP'}
+        onPress={handleSignUp}
+        disabled={submitting}
+      />
 
       {/* Login Redirect */}
       <View style={styles.bottomLinkContainer}>
@@ -222,6 +254,7 @@ const styles = StyleSheet.create({
   termsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    minHeight: 44,
     marginTop: 4,
     marginBottom: 6,
   },

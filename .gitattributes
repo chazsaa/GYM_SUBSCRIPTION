@@ -1,0 +1,21 @@
+# Normalise line endings so Windows and Mac/Linux teammates stop seeing
+# "LF will be replaced by CRLF" warnings and noisy diffs.
+* text=auto eol=lf
+
+# Windows script files keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files: never touch
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.ttf  binary
+*.otf  binary
+*.woff binary
+*.woff2 binary
+*.zip  binary
+*.pdf  binary

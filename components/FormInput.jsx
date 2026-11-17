@@ -17,11 +17,16 @@ const FormInput = ({ label, error, rightElement, style, ...inputProps }) => {
             style,
           ]}
           placeholderTextColor={COLORS.placeholderMuted}
+          accessibilityLabel={label}
           {...inputProps}
         />
         {rightElement ? <View style={styles.rightElement}>{rightElement}</View> : null}
       </View>
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
+      {!!error && (
+        <Text style={styles.errorText} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
     </View>
   );
 };

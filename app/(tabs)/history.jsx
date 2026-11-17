@@ -7,6 +7,7 @@ import { useSubscription, formatDate, PAYMENT_METHODS } from '../../context/Subs
 import { formatPeso } from '../../data/subscriptionPlans';
 import { COLORS } from '../../theme/colors';
 
+const KIND_LABELS = { new: 'New', renewal: 'Renewal', upgrade: 'Upgrade' };
 const STATUS_COLORS = { Paid: '#1F6B3A', Pending: '#8A5A00', Cancelled: '#6B2A2A' };
 
 export default function History() {
@@ -36,7 +37,7 @@ export default function History() {
           </View>
           <View style={styles.row}>
             <Text style={styles.meta}>
-              {formatDate(p.date)} • {PAYMENT_METHODS[p.method]}
+              {KIND_LABELS[p.kind] ?? 'New'} • {formatDate(p.date)} • {PAYMENT_METHODS[p.method]}
             </Text>
             <View style={[styles.badge, { backgroundColor: STATUS_COLORS[p.status] }]}>
               <Text style={styles.badgeText}>{p.status}</Text>

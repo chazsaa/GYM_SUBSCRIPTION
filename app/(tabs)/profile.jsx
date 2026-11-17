@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import TabScreen from '../../components/TabScreen';
 import PrimaryButton from '../../components/PrimaryButton';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, SHADES } from '../../theme/colors';
 
 export default function Profile() {
   const { user, logout } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
   return (
     <TabScreen title="Profile">
       <View style={styles.card}>
@@ -17,7 +19,20 @@ export default function Profile() {
         <Text style={styles.name}>{user?.name || 'Member'}</Text>
         <Text style={styles.email}>{user?.email}</Text>
       </View>
-      <PrimaryButton label="LOG OUT" onPress={logout} />
+      <PrimaryButton label="LOG OUT" onPress={() => setConfirmLogout(true)} />
+
+      <ConfirmDialog
+        visible={confirmLogout}
+        title="Log out?"
+        message="You will need to log in again to see your membership."
+        confirmLabel="Log out"
+        destructive
+        onConfirm={() => {
+          setConfirmLogout(false);
+          logout();
+        }}
+        onCancel={() => setConfirmLogout(false)}
+      />
     </TabScreen>
   );
 }

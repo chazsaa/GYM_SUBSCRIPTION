@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "gym_subscription",
@@ -6,7 +7,6 @@
     "orientation": "portrait",
     "scheme": "gymsubscription",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },

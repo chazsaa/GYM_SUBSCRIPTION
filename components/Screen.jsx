@@ -1,12 +1,7 @@
 import React from 'react';
-import {
-  SafeAreaView,
-  StatusBar,
-  KeyboardAvoidingView,
-  ScrollView,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../theme/colors';
 
 // Reusable screen wrapper.
@@ -14,7 +9,7 @@ import { COLORS } from '../theme/colors';
 const Screen = ({ children }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar style="light" />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -41,7 +36,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 28,
-    paddingTop: 60,
+    paddingTop: 24,
     paddingBottom: 40,
   },
 });

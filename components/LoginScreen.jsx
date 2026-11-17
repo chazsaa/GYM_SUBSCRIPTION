@@ -20,8 +20,10 @@ const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({}); // { email, password } messages
   const [loginError, setLoginError] = useState(''); // wrong email/password message
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (submitting) return;
     const nextErrors = {};
 
     if (!email.trim()) {
@@ -37,12 +39,14 @@ const LoginScreen = () => {
     setLoginError('');
     if (Object.keys(nextErrors).length > 0) return;
 
-    // login() returns true or false. On success the auth state changes and
+    // login() returns { ok, message }. On success the auth state changes and
     // the router moves from Login to the Home screen (see app/_layout.jsx).
     // We never log or pass the password anywhere else.
-    const success = login(email, password);
-    if (!success) {
-      setLoginError('Incorrect email or password. Please try again.');
+    setSubmitting(true);
+    const result = await login(email, password);
+    setSubmitting(false);
+    if (!result.ok) {
+      setLoginError(result.message);
     }
   };
 
@@ -54,15 +58,7 @@ const LoginScreen = () => {
     router.push('/register');
   };
 
-  const handleGoogleLogin = () => {
-    // TODO: connect to real Google OAuth flow (e.g. expo-auth-session / Firebase)
-    console.log('Continue with Google pressed');
-  };
 
-  const handleFacebookLogin = () => {
-    // TODO: connect to real Facebook OAuth flow
-    console.log('Continue with Facebook pressed');
-  };
 
   return (
     <Screen>
@@ -106,7 +102,7 @@ const LoginScreen = () => {
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {showPassword ? (
               <EyeOff size={20} color={COLORS.textMuted} />
@@ -129,7 +125,11 @@ const LoginScreen = () => {
       {!!loginError && <Text style={styles.loginError}>{loginError}</Text>}
 
       {/* Login Button */}
-      <PrimaryButton label="LOGIN" onPress={handleLogin} />
+      <PrimaryButton
+        label={submitting ? 'LOGGING IN...' : 'LOGIN'}
+        onPress={handleLogin}
+        disabled={submitting}
+      />
 
 
       {/* Divider */}
@@ -142,23 +142,28 @@ const LoginScreen = () => {
       {/* Social Login */}
       <View style={styles.socialRow}>
         <TouchableOpacity
-          style={styles.socialButton}
-          activeOpacity={0.85}
-          onPress={handleGoogleLogin}
+          style={[styles.socialButton, styles.socialButtonDisabled]}
+          disabled
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google, coming soon"
+          accessibilityState={{ disabled: true }}
         >
           <FontAwesome name="google" size={18} color={COLORS.text} />
           <Text style={styles.socialButtonText}>Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.socialButton}
-          activeOpacity={0.85}
-          onPress={handleFacebookLogin}
+          style={[styles.socialButton, styles.socialButtonDisabled]}
+          disabled
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Facebook, coming soon"
+          accessibilityState={{ disabled: true }}
         >
           <FontAwesome name="facebook" size={18} color={COLORS.text} />
           <Text style={styles.socialButtonText}>Facebook</Text>
         </TouchableOpacity>
       </View>
+      <Text style={styles.comingSoon}>Social login is coming soon.</Text>
 
       {/* Register Redirect */}
       <View style={styles.registerContainer}>
@@ -227,6 +232,15 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 14,
     paddingVertical: 13,
+  },
+  socialButtonDisabled: {
+    opacity: 0.45,
+  },
+  comingSoon: {
+    color: COLORS.textMuted,
+    fontSize: 12.5,
+    textAlign: 'center',
+    marginTop: 10,
   },
   socialButtonText: {
     color: COLORS.text,

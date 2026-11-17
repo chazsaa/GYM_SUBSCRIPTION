@@ -6,6 +6,7 @@ import Screen from './Screen';
 import BackButton from './BackButton';
 import PrimaryButton from './PrimaryButton';
 import { useSubscription } from '../context/SubscriptionContext';
+import { usePlans } from '../context/PlansContext';
 import { COLORS, SHADES } from '../theme/colors';
 
 const Stat = ({ icon, label, value }) => (
@@ -16,14 +17,11 @@ const Stat = ({ icon, label, value }) => (
   </View>
 );
 
-// "plan" is the plan found by the route file (or undefined if the id is wrong).
-// "id" is the id from the URL. We show it in the "not found" message.
 const PlanDetailsScreen = ({ plan, id }) => {
   const router = useRouter();
-  const { status } = useSubscription();
-  const busy = status === 'active' || status === 'pending';
+  const { status, subscription } = useSubscription();
+  const { getPlanById } = usePlans();
 
-  // If the id does not match any plan, show a friendly message instead of crashing
   if (!plan) {
     return (
       <Screen>
@@ -41,6 +39,31 @@ const PlanDetailsScreen = ({ plan, id }) => {
         />
       </Screen>
     );
+  }
+
+  // What the main button does depends on the member's membership.
+  const currentPlan = subscription ? getPlanById(subscription.planId) : null;
+  let notice = '';
+  let label = 'SUBSCRIBE NOW';
+  let action = () => router.push(`/payment/${plan.id}`);
+  if (status === 'pending') {
+    notice =
+      'You have a membership waiting for payment. Finish or cancel it in the Current tab before choosing another plan.';
+    label = 'VIEW CURRENT MEMBERSHIP';
+    action = () => router.navigate('/current');
+  } else if (status === 'active') {
+    if (subscription.planId === plan.id) {
+      notice = 'This is your current plan. You can renew it in the Current tab.';
+      label = 'VIEW CURRENT MEMBERSHIP';
+      action = () => router.navigate('/current');
+    } else {
+      const upgrade = plan.amount > (currentPlan?.amount ?? 0);
+      notice = upgrade
+        ? 'Upgrading starts this plan now. The unused days of your current plan are credited, and you pay the difference.'
+        : 'Downgrading takes effect when your current membership ends. Nothing is charged now.';
+      label = upgrade ? 'UPGRADE TO THIS PLAN' : 'DOWNGRADE TO THIS PLAN';
+      action = () => router.push(`/payment/${plan.id}?mode=change`);
+    }
   }
 
   return (
@@ -87,17 +110,8 @@ const PlanDetailsScreen = ({ plan, id }) => {
         <Text style={styles.accessText}>{plan.access}</Text>
       </View>
 
-      {busy && (
-        <Text style={styles.notice}>
-          {status === 'pending'
-            ? 'You have a membership waiting for payment. Finish or cancel it in the Current tab before choosing another plan.'
-            : 'You already have an active membership. You can subscribe to a new plan after it expires.'}
-        </Text>
-      )}
-      <PrimaryButton
-        label={busy ? 'VIEW CURRENT MEMBERSHIP' : 'SUBSCRIBE NOW'}
-        onPress={() => (busy ? router.navigate('/current') : router.push(`/payment/${plan.id}`))}
-      />
+      {!!notice && <Text style={styles.notice}>{notice}</Text>}
+      <PrimaryButton label={label} onPress={action} />
       <TouchableOpacity
         style={styles.outlineButton}
         activeOpacity={0.8}
