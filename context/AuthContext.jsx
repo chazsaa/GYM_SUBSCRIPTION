@@ -44,6 +44,9 @@ export const AuthProvider = ({ children }) => {
   // While true, login-state changes are ignored (used during registration and
   // password reset, so the member is NOT logged in automatically).
   const quiet = useRef(false);
+  // Which dashboard this account gets. Stored together with the user it belongs
+  // to, so a role is never carried over from a previous login.
+  const [roleState, setRoleState] = useState({ userId: null, isAdmin: false });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -57,6 +60,32 @@ export const AuthProvider = ({ children }) => {
     });
     return () => data.subscription.unsubscribe();
   }, []);
+
+  // Is this account a gym admin? Asked once per login. A person can only see
+  // their own row in the admins table, so this reveals nothing about anyone else.
+  // The database re-checks every admin action, so this only decides which
+  // dashboard is shown.
+  const userId = session?.user?.id ?? null;
+  useEffect(() => {
+    if (!userId) return undefined;
+    let cancelled = false;
+    supabase
+      .from('admins')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setRoleState({ userId, isAdmin: !!data });
+      })
+      .catch(() => {
+        if (!cancelled) setRoleState({ userId, isAdmin: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+  const roleLoading = userId !== null && roleState.userId !== userId;
+  const isAdmin = !roleLoading && userId !== null && roleState.isAdmin;
 
   // user is null when logged out, or { id, name, email } when logged in.
   const user = session
@@ -143,6 +172,8 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     isLoggedIn: user !== null,
+    isAdmin,
+    roleLoading,
     loading,
     login,
     register,

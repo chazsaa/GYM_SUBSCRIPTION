@@ -29,7 +29,7 @@ export default function Current() {
   const router = useRouter();
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [actionError, setActionError] = useState('');
-  const { subscription, status, completePayment, cancelSubscription, changePlan } = useSubscription();
+  const { subscription, status, pendingPayment, cancelSubscription, scheduleChange } = useSubscription();
   const { getPlanById } = usePlans();
   const plan = subscription ? getPlanById(subscription.planId) : null;
   const nextPlan = subscription?.nextPlanId ? getPlanById(subscription.nextPlanId) : null;
@@ -100,6 +100,21 @@ export default function Current() {
             Your spot is reserved, but the membership is not active until {formatPeso(plan.amount)} is paid.
           </Text>
         )}
+        {pending && pendingPayment && pendingPayment.method === 'gym' && (
+          <View style={styles.codeBox}>
+            <Text style={styles.codeLabel}>Pay {formatPeso(pendingPayment.amount)} cash at the front desk</Text>
+            <Text selectable style={styles.code}>{pendingPayment.reference}</Text>
+            <Text style={styles.codeHint}>
+              Show this code to the gym admin. They will confirm your payment and your membership starts right
+              after.
+            </Text>
+          </View>
+        )}
+        {pending && pendingPayment && pendingPayment.method !== 'gym' && (
+          <Text style={styles.notice}>
+            Your online payment was not completed. You can try again below.
+          </Text>
+        )}
         {active && (
           <Text style={styles.notice}>
             {daysLeft(subscription.endDate)} day{daysLeft(subscription.endDate) === 1 ? '' : 's'} left.
@@ -125,12 +140,14 @@ export default function Current() {
 
       <View style={{ height: 20 }} />
       {pending && (
-        <>
-          <PrimaryButton label={`PAY ${plan.price} ONLINE`} onPress={() => router.push(`/payment/${plan.id}`)} />
-          <TouchableOpacity style={styles.outline} onPress={() => run(() => completePayment('gym'))}>
-            <Text style={styles.outlineText}>I paid at the front desk</Text>
-          </TouchableOpacity>
-        </>
+        <PrimaryButton
+          label={
+            pendingPayment?.method === 'gym'
+              ? `PAY ${plan.price} ONLINE INSTEAD`
+              : `PAY ${plan.price} ONLINE`
+          }
+          onPress={() => router.push(`/payment/${plan.id}`)}
+        />
       )}
       {(active || expired) && (
         <PrimaryButton
@@ -144,7 +161,7 @@ export default function Current() {
         </TouchableOpacity>
       )}
       {active && nextPlan && (
-        <TouchableOpacity style={styles.outline} onPress={() => run(() => changePlan(plan.id, null))}>
+        <TouchableOpacity style={styles.outline} onPress={() => run(() => scheduleChange(plan.id))}>
           <Text style={styles.outlineText}>Keep {plan.name} (cancel plan change)</Text>
         </TouchableOpacity>
       )}
@@ -197,6 +214,18 @@ const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3, marginBottom: 6 },
   badgeActive: { backgroundColor: '#1F6B3A' },
   badgePending: { backgroundColor: '#8A5A00' },
+  codeBox: {
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBackground,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 14,
+  },
+  codeLabel: { color: COLORS.textMuted, fontSize: 13, textAlign: 'center' },
+  code: { color: COLORS.text, fontSize: 28, fontWeight: '800', letterSpacing: 2, marginVertical: 6 },
+  codeHint: { color: COLORS.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   badgeExpired: { backgroundColor: '#6B2A2A' },
   error: { color: COLORS.error ?? '#FF6B6B', fontSize: 14, marginTop: 10, textAlign: 'center' },
   badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },

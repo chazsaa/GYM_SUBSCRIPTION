@@ -4,11 +4,21 @@ import { PlansProvider } from '../context/PlansContext';
 import { SubscriptionProvider } from '../context/SubscriptionContext';
 
 function RootNavigator() {
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, isAdmin, loading, roleLoading } = useAuth();
 
-  // Wait until the saved login is restored, so the Login screen does not flash.
-  if (loading) return null;
+  // Wait until the saved login is restored and we know the account's role, so
+  // neither the Login screen nor the wrong dashboard flashes on screen.
+  if (loading || (isLoggedIn && roleLoading)) return null;
 
+  const isMember = isLoggedIn && !isAdmin;
+
+  // Three kinds of visitor, three separate sets of screens:
+  //   logged out -> login screens
+  //   member     -> the Member app (tabs, plans, payment, receipts, profile)
+  //   admin      -> the Admin Console (app/admin/*)
+  // A screen outside the visitor's set cannot be opened, even by typing its web
+  // address: the app sends them to their own home instead.
+  // (The database enforces the same rule, so this is not the only protection.)
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!isLoggedIn}>
@@ -17,10 +27,17 @@ function RootNavigator() {
         <Stack.Screen name="forgot-password" />
       </Stack.Protected>
 
-      <Stack.Protected guard={isLoggedIn}>
+      <Stack.Protected guard={isMember}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="details/[id]" />
         <Stack.Screen name="payment/[id]" />
+        <Stack.Screen name="receipt/[id]" />
+        <Stack.Screen name="edit-profile" />
+        <Stack.Screen name="change-password" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={isAdmin}>
+        <Stack.Screen name="admin" />
       </Stack.Protected>
     </Stack>
   );

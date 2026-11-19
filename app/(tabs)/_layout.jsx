@@ -5,7 +5,6 @@ import { COLORS, SHADES } from '../../theme/colors';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  
   return (
     <Tabs
       screenOptions={{

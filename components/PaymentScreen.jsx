@@ -11,10 +11,10 @@ import { COLORS, SHADES } from '../theme/colors';
 
 const METHOD_ICONS = { gcash: 'cellphone', maya: 'wallet-outline', card: 'credit-card-outline', gym: 'store-outline' };
 const METHOD_NOTES = {
-  gcash: 'Pay now. Membership starts right away.',
-  maya: 'Pay now. Membership starts right away.',
-  card: 'Pay now. Membership starts right away.',
-  gym: 'Reserve now, pay at the front desk. Membership starts after payment.',
+  gcash: 'Pay now. Membership starts as soon as the payment is confirmed.',
+  maya: 'Pay now. Membership starts as soon as the payment is confirmed.',
+  card: 'Pay now. Membership starts as soon as the payment is confirmed.',
+  gym: 'Reserve now and pay cash at the front desk. The gym admin confirms your payment, then your membership starts.',
 };
 const ONLINE_METHODS = ['gcash', 'maya', 'card'];
 
@@ -25,10 +25,10 @@ const PaymentScreen = ({ plan, id, mode: modeParam }) => {
   const {
     status,
     subscription,
-    subscribe,
-    completePayment,
-    renewSubscription,
-    changePlan,
+    paymentsMode,
+    reserveMembership,
+    startPayment,
+    scheduleChange,
     quoteChange,
   } = useSubscription();
   const [method, setMethod] = useState('gcash');
@@ -123,48 +123,59 @@ const PaymentScreen = ({ plan, id, mode: modeParam }) => {
     if (processing) return;
     setProcessing(true);
     setErrorMessage('');
-    // Payments are still simulated (real payments come in Phase 3),
-    // so a short delay stands in for the payment provider.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     let res;
-    if (mode === 'renew') res = await renewSubscription(method);
-    else if (mode === 'change') res = await changePlan(plan.id, isDowngrade ? null : method);
-    else if (completing) res = await completePayment(method);
-    else res = await subscribe(plan, method);
+    if (mode === 'renew') {
+      res = await startPayment('renewal', plan.id, method);
+    } else if (mode === 'change') {
+      res = isDowngrade
+        ? await scheduleChange(plan.id)
+        : await startPayment('upgrade', plan.id, method);
+    } else if (method === 'gym' && !completing) {
+      res = await reserveMembership(plan.id);
+    } else {
+      res = await startPayment('new', plan.id, method);
+    }
     setProcessing(false);
     if (!res.ok) {
       setErrorMessage(res.message || 'Something went wrong. Please try again.');
       return;
     }
-    if (mode === 'renew') {
+
+    const paymentId = res.data?.payment_id;
+    if (res.redirected) {
       setResult({
-        title: 'Membership renewed',
-        text:
-          res.data?.result === 'restarted'
-            ? `${plan.name} has started again and runs until ${formatDate(res.data?.ends)}.`
-            : `${plan.name} now runs until ${formatDate(res.data?.ends)}.`,
+        title: 'Finish your payment',
+        text: 'Complete the payment on the page that opened. Your membership updates automatically once the payment is confirmed.',
       });
-    } else if (mode === 'change') {
-      setResult(
-        isDowngrade
-          ? {
-              title: 'Plan change scheduled',
-              text: `You will move to ${plan.name} on ${formatDate(quote.effective)}. Nothing was charged.`,
-            }
-          : {
-              title: 'Plan upgraded',
-              text: `${plan.name} is now active and runs until ${formatDate(res.data?.ends)}.`,
-            }
-      );
-    } else if (res.pending) {
+    } else if (isDowngrade) {
+      setResult({
+        title: 'Plan change scheduled',
+        text: `You will move to ${plan.name} on ${formatDate(quote.effective)}. Nothing was charged.`,
+      });
+    } else if (method === 'gym' && mode === 'new' && !completing) {
       setResult({
         title: 'Membership reserved',
-        text: `${plan.name} is waiting for payment. Pay ${formatPeso(plan.amount)} at the gym front desk to activate it.`,
+        text: `Pay ${formatPeso(plan.amount)} in cash at the front desk and show this code. The gym admin will confirm your payment, then your membership starts.`,
+        reference: res.data?.reference,
+        paymentId,
+      });
+    } else if (mode === 'renew') {
+      setResult({
+        title: 'Payment received',
+        text: `${plan.name} now runs until ${formatDate(res.data?.ends)}.`,
+        paymentId,
+      });
+    } else if (mode === 'change') {
+      setResult({
+        title: 'Plan upgraded',
+        text: `${plan.name} is now active and runs until ${formatDate(res.data?.ends)}.`,
+        paymentId,
       });
     } else {
       setResult({
         title: 'Payment received',
         text: `${plan.name} is now active. Enjoy your workouts!`,
+        paymentId,
       });
     }
   };
@@ -173,6 +184,12 @@ const PaymentScreen = ({ plan, id, mode: modeParam }) => {
     setResult(null);
     if (router.canDismiss()) router.dismissAll();
     router.navigate('/current');
+  };
+
+  const goToReceipt = () => {
+    const paymentId = result?.paymentId;
+    goToCurrent();
+    if (paymentId) router.push(`/receipt/${paymentId}`);
   };
 
   const title =
@@ -262,6 +279,9 @@ const PaymentScreen = ({ plan, id, mode: modeParam }) => {
         );
       })}
 
+      {payNow && paymentsMode === 'simulated' && (
+        <Text style={styles.testNote}>Test mode: no real money is charged.</Text>
+      )}
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>{isDowngrade ? 'Due today' : 'Total'}</Text>
         <Text style={styles.totalValue}>{isDowngrade ? formatPeso(0) : formatPeso(total)}</Text>
@@ -281,8 +301,22 @@ const PaymentScreen = ({ plan, id, mode: modeParam }) => {
             <MaterialCommunityIcons name="check-circle-outline" size={44} color={COLORS.accent} />
             <Text style={styles.modalTitle}>{result?.title}</Text>
             <Text style={styles.modalText}>{result?.text}</Text>
+            {!!result?.reference && (
+              <View style={styles.referenceBox}>
+                <Text style={styles.referenceLabel}>Your payment code</Text>
+                <Text selectable style={styles.referenceCode}>{result.reference}</Text>
+              </View>
+            )}
             <View style={{ alignSelf: 'stretch' }}>
-              <PrimaryButton label="VIEW MY MEMBERSHIP" onPress={goToCurrent} />
+              <PrimaryButton
+                label={result?.paymentId && !result?.reference ? 'VIEW RECEIPT' : 'VIEW MY MEMBERSHIP'}
+                onPress={result?.paymentId && !result?.reference ? goToReceipt : goToCurrent}
+              />
+              {!!result?.paymentId && !result?.reference && (
+                <TouchableOpacity style={styles.modalLink} onPress={goToCurrent} accessibilityRole="button">
+                  <Text style={styles.modalLinkText}>View my membership</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -335,6 +369,21 @@ const styles = StyleSheet.create({
   breakdownLabel: { color: COLORS.textMuted, fontSize: 14, flex: 1, paddingRight: 12 },
   breakdownValue: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
   infoText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 21 },
+  testNote: { color: COLORS.textMuted, fontSize: 12, marginTop: 4, marginBottom: 2 },
+  referenceBox: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    backgroundColor: SHADES.maroonDeep,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  referenceLabel: { color: COLORS.textMuted, fontSize: 12 },
+  referenceCode: { color: COLORS.text, fontSize: 28, fontWeight: '800', letterSpacing: 2, marginTop: 4 },
+  modalLink: { alignItems: 'center', justifyContent: 'center', minHeight: 44, marginTop: 6 },
+  modalLinkText: { color: COLORS.accent, fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
   totalLabel: { color: COLORS.textMuted, fontSize: 15 },
   totalValue: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
