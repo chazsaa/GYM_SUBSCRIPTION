@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, ImageBackground } from 'react-native';
 import { Image } from 'expo-image';
 import { usePathname, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -143,19 +143,22 @@ export default function AdminShell({ children }) {
 
   if (wide) {
     return (
-      <View style={styles.root}>
-        <StatusBar style="dark" />
+      <ImageBackground source={require('../../assets/image/banner.jpg')} style={styles.root} imageStyle={styles.backgroundImage}>
+        <View pointerEvents="none" style={styles.backgroundScrim} />
+        <StatusBar style="light" />
         <View style={styles.sidebarWrap}>
           <Sidebar pathname={pathname} onNavigate={go} onLogout={() => setConfirmLogout(true)} />
         </View>
         <View style={styles.main}>{children}</View>
         {logoutDialog}
-      </View>
+      </ImageBackground>
     );
   }
 
   return (
     <SafeAreaView style={styles.phoneRoot} edges={['top']}>
+      <ImageBackground source={require('../../assets/image/banner.jpg')} style={styles.phoneBackground} imageStyle={styles.backgroundImage}>
+      <View pointerEvents="none" style={styles.backgroundScrim} />
       <StatusBar style="light" />
       <View style={styles.topBar}>
         <Pressable
@@ -195,14 +198,18 @@ export default function AdminShell({ children }) {
         </View>
       )}
       {logoutDialog}
+      </ImageBackground>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row', backgroundColor: ADMIN.bg },
-  main: { flex: 1, backgroundColor: ADMIN.bg },
-  phoneRoot: { flex: 1, backgroundColor: ADMIN.sidebar },
+  backgroundImage: { resizeMode: 'cover' },
+  backgroundScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(5, 4, 7, 0.72)' },
+  main: { flex: 1, backgroundColor: 'transparent' },
+  phoneRoot: { flex: 1, backgroundColor: ADMIN.bg },
+  phoneBackground: { flex: 1, backgroundColor: ADMIN.bg },
 
   sidebarWrap: { width: 252, borderRightWidth: 1, borderRightColor: ADMIN.sidebarBorder },
   sidebar: { backgroundColor: ADMIN.sidebar, flex: 1 },
@@ -241,7 +248,7 @@ const styles = StyleSheet.create({
   logout: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 40, paddingHorizontal: 10, borderRadius: 8 },
   logoutText: { color: ADMIN.sidebarText, fontSize: 14, fontWeight: '600' },
 
-  topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: ADMIN.sidebar, paddingHorizontal: 14, minHeight: 56 },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(10, 8, 13, 0.92)', paddingHorizontal: 14, minHeight: 56 },
   menuBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   topTitle: { flex: 1, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
   topBrand: { color: ADMIN.sidebarAccent, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },

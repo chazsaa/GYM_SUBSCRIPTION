@@ -47,8 +47,15 @@ export const PlansProvider = ({ children }) => {
       }
     };
     load();
+    // Keep member plan cards in sync when an administrator edits availability,
+    // prices, or descriptions from the Admin Console.
+    const channel = supabase
+      .channel('member-plans-live-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plans' }, load)
+      .subscribe();
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, []);
 

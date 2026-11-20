@@ -1,33 +1,19 @@
-// Colors for the Admin Dashboard only.
-// The Member side is dark; the Admin side is a light "workspace" with a dark
-// sidebar, so the two never look alike. The maroon is kept so it is still GymFit.
+// Admin-only dark glass theme inspired by TrackandfieldStore's Night Stadium UI.
+// The actual dashboard backdrop is GymFit's own banner.jpg photograph.
 export const ADMIN = {
-  bg: '#F3F4F6', // page background
-  surface: '#FFFFFF', // cards and tables
-  surfaceAlt: '#F9FAFB', // table headers, hover rows
-  border: '#E5E7EB',
-  text: '#111827',
-  textMuted: '#5B6472', // 5:1 or better on white and on the page background
-  brand: '#8B0000', // buttons, active tab underline
-  brandSoft: '#FBEAEA',
-  onBrand: '#FFFFFF',
-
-  sidebar: '#12141A',
-  sidebarActive: '#2A171A',
-  sidebarBorder: '#262A33',
-  sidebarText: '#D7DAE1',
-  sidebarMuted: '#8F96A3',
-  sidebarAccent: '#F08080', // active item icon / marker
+  bg: '#0B090C', surface: 'rgba(16, 13, 18, 0.82)', surfaceAlt: 'rgba(255, 255, 255, 0.055)',
+  border: 'rgba(255, 255, 255, 0.13)', text: '#F6F4F2', textMuted: 'rgba(246, 244, 242, 0.72)',
+  brand: '#C8183E', brandSoft: 'rgba(200, 24, 62, 0.20)', onBrand: '#FFFFFF',
+  sidebar: 'rgba(10, 8, 13, 0.94)', sidebarActive: 'rgba(200, 24, 62, 0.22)',
+  sidebarBorder: 'rgba(255, 255, 255, 0.10)', sidebarText: '#F1EDEF',
+  sidebarMuted: 'rgba(246, 244, 242, 0.58)', sidebarAccent: '#FF9BB1',
 };
-
-// Status colors: a dark text color on a light tint of the same hue.
 export const TONES = {
-  success: { fg: '#166534', bg: '#DCFCE7', bar: '#16A34A' },
-  warning: { fg: '#92400E', bg: '#FEF3C7', bar: '#D97706' },
-  danger: { fg: '#991B1B', bg: '#FEE2E2', bar: '#DC2626' },
-  info: { fg: '#1E40AF', bg: '#DBEAFE', bar: '#2563EB' },
-  neutral: { fg: '#374151', bg: '#E5E7EB', bar: '#6B7280' },
-  brand: { fg: '#8B0000', bg: '#FBEAEA', bar: '#8B0000' },
+  success: { fg: '#72E6B2', bg: 'rgba(61, 220, 151, 0.16)', bar: '#3DDC97' },
+  warning: { fg: '#FFD27A', bg: 'rgba(245, 177, 66, 0.16)', bar: '#E9A93A' },
+  danger: { fg: '#FF9AA5', bg: 'rgba(255, 92, 108, 0.16)', bar: '#FF5C6C' },
+  info: { fg: '#9BC8FF', bg: 'rgba(87, 155, 255, 0.16)', bar: '#579BFF' },
+  neutral: { fg: '#D3CBD0', bg: 'rgba(255, 255, 255, 0.10)', bar: '#9A9097' },
+  brand: { fg: '#FF9BB1', bg: 'rgba(200, 24, 62, 0.20)', bar: '#C8183E' },
 };
-
 export default ADMIN;

@@ -8,6 +8,7 @@ import PlanCard from './PlanCard';
 import ConfirmDialog from './ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
 import { usePlans } from '../context/PlansContext';
+import { useGymInfo } from '../context/GymInfoContext';
 import { bannerImage } from '../data/subscriptionPlans';
 import { COLORS, SHADES } from '../theme/colors';
 import { BRAND } from '../constants/brand';
@@ -17,6 +18,7 @@ const HomeScreen = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { plans } = usePlans();
+  const { gymInfo } = useGymInfo();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const firstName = user?.name ? user.name.trim().split(' ')[0] : '';
 
@@ -71,6 +73,24 @@ const HomeScreen = () => {
               </View>
               <Image source={bannerImage} style={styles.bannerPhoto} contentFit="cover" transition={150} />
             </View>
+
+            {Object.values(gymInfo).some(Boolean) && (
+              <View style={styles.gymInfoCard}>
+                {!!gymInfo.gym_name && <Text style={styles.gymInfoTitle}>{gymInfo.gym_name}</Text>}
+                {!!gymInfo.address && <Text style={styles.gymInfoText}>{gymInfo.address}</Text>}
+                {!!gymInfo.hours_weekdays && <Text style={styles.gymInfoText}>Mon–Fri: {gymInfo.hours_weekdays}</Text>}
+                {!!gymInfo.hours_weekends && <Text style={styles.gymInfoText}>Weekends: {gymInfo.hours_weekends}</Text>}
+                {!!gymInfo.phone && <Text style={styles.gymInfoText}>Phone: {gymInfo.phone}</Text>}
+                {!!gymInfo.email && <Text style={styles.gymInfoText}>Email: {gymInfo.email}</Text>}
+                {!!gymInfo.capacity && <Text style={styles.gymInfoText}>Capacity: {gymInfo.capacity} people</Text>}
+                {!!gymInfo.announcement && (
+                  <View style={styles.announcement}>
+                    <Text style={styles.announcementLabel}>GYM ANNOUNCEMENT</Text>
+                    <Text style={styles.gymInfoText}>{gymInfo.announcement}</Text>
+                  </View>
+                )}
+              </View>
+            )}
 
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>Membership Plans</Text>
@@ -135,6 +155,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: COLORS.text, fontSize: 19, fontWeight: '800' },
   sectionCount: { color: COLORS.accent, fontSize: 13, fontWeight: '600' },
+  gymInfoCard: { backgroundColor: '#1B171B', borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, padding: 16, marginBottom: 20 },
+  gymInfoTitle: { color: COLORS.text, fontSize: 16, fontWeight: '800', marginBottom: 5 },
+  gymInfoText: { color: COLORS.textMuted, fontSize: 13, lineHeight: 19, marginTop: 2 },
+  announcement: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
+  announcementLabel: { color: COLORS.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.2, marginBottom: 4 },
 });
 
 export default HomeScreen;

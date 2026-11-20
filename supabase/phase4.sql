@@ -125,6 +125,7 @@ declare
   v_active int;
   v_expiring int;
   v_expired int;
+  v_no_membership int;
   v_pending int;
   v_pending_amount bigint;
   v_rev_today bigint;
@@ -143,17 +144,22 @@ begin
 
   -- Each member's newest membership decides their status (same rule as the member app).
   with latest as (
-    select distinct on (s.user_id) s.status, s.end_date
+    select distinct on (s.user_id) s.user_id, s.status, s.end_date
       from public.subscriptions s
      where not exists (select 1 from public.admins a where a.user_id = s.user_id)
      order by s.user_id, s.created_at desc
+  ), members as (
+    select p.id as user_id, l.status, l.end_date
+      from public.profiles p left join latest l on l.user_id = p.id
+     where not exists (select 1 from public.admins a where a.user_id = p.id)
   )
   select
-    count(*) filter (where l.status = 'active' and l.end_date > v_now),
-    count(*) filter (where l.status = 'active' and l.end_date > v_now and l.end_date <= v_now + interval '7 days'),
-    count(*) filter (where (l.status = 'active' and l.end_date <= v_now) or l.status = 'expired')
-    into v_active, v_expiring, v_expired
-    from latest l;
+    count(*) filter (where m.status = 'active' and m.end_date > v_now),
+    count(*) filter (where m.status = 'active' and m.end_date > v_now and m.end_date <= v_now + interval '7 days'),
+    count(*) filter (where (m.status = 'active' and m.end_date <= v_now) or m.status = 'expired'),
+    count(*) filter (where m.status is null or m.status = 'cancelled')
+    into v_active, v_expiring, v_expired, v_no_membership
+    from members m;
 
   select count(*), coalesce(sum(p.amount), 0) into v_pending, v_pending_amount
     from public.payments p where p.status = 'pending' and p.method = 'gym';
@@ -177,16 +183,18 @@ begin
 
   select coalesce(jsonb_agg(x order by x.end_date), '[]'::jsonb) into v_expiring_list
     from (
+      with latest as (
+        select distinct on (s.user_id) s.* from public.subscriptions s
+         where not exists (select 1 from public.admins a where a.user_id = s.user_id)
+         order by s.user_id, s.created_at desc
+      )
       select s.user_id, coalesce(pr.full_name, '') as member_name, coalesce(pr.email, '') as member_email,
              pl.name as plan_name, s.end_date,
              greatest(0, ceil(extract(epoch from (s.end_date - v_now)) / 86400))::int as days_left
-        from public.subscriptions s
-        join public.plans pl on pl.id = s.plan_id
+        from latest s join public.plans pl on pl.id = s.plan_id
         left join public.profiles pr on pr.id = s.user_id
        where s.status = 'active' and s.end_date > v_now and s.end_date <= v_now + interval '7 days'
-         and not exists (select 1 from public.admins a where a.user_id = s.user_id)
-       order by s.end_date
-       limit 6
+       order by s.end_date limit 6
     ) x;
 
   return jsonb_build_object(
@@ -195,10 +203,7 @@ begin
     'active_members', v_active,
     'expiring_soon', v_expiring,
     'expired_members', v_expired,
-    'no_membership', greatest(v_total - v_active - v_expired - (
-      select count(*) from public.subscriptions s
-       where s.status = 'pending'
-         and not exists (select 1 from public.admins a where a.user_id = s.user_id)), 0),
+    'no_membership', v_no_membership,
     'pending_cash_count', v_pending,
     'pending_cash_amount', v_pending_amount,
     'revenue_today', v_rev_today,

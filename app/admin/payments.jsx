@@ -98,16 +98,15 @@ export default function Payments() {
     setApproving(null);
     setRejecting(null);
     const who = payment.member_name || payment.member_email;
-    if (!res.ok) {
-      setState((s) => ({ ...s, error: res.message }));
-    } else {
+    if (res.ok) {
       setNotice(
         approve
           ? `Confirmed ${formatPeso(payment.amount)} from ${who}. Their membership has started.`
           : `Rejected the payment from ${who}. The reservation was released.`
       );
     }
-    load();
+    await load();
+    if (!res.ok) setState((s) => ({ ...s, error: res.message }));
   };
 
   // Read nullable values here, not inside button handlers: the React Compiler

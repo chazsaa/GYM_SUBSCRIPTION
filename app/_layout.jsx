@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { PlansProvider } from '../context/PlansContext';
+import { GymInfoProvider } from '../context/GymInfoContext';
 import { SubscriptionProvider } from '../context/SubscriptionContext';
 
 function RootNavigator() {
@@ -47,9 +48,11 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <PlansProvider>
-        <SubscriptionProvider>
-          <RootNavigator />
-        </SubscriptionProvider>
+        <GymInfoProvider>
+          <SubscriptionProvider>
+            <RootNavigator />
+          </SubscriptionProvider>
+        </GymInfoProvider>
       </PlansProvider>
     </AuthProvider>
   );

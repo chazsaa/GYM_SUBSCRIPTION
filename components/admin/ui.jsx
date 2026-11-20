@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   dim: { opacity: 0.55 },
 
   // page
-  pageScroll: { flex: 1, backgroundColor: ADMIN.bg },
+  pageScroll: { flex: 1, backgroundColor: 'transparent' },
   pageContent: { padding: 16, paddingBottom: 48 },
   pageContentWide: { padding: 32, paddingBottom: 64 },
   pageInner: { width: '100%', maxWidth: 1240, alignSelf: 'center' },
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     backgroundColor: ADMIN.surface,
     borderWidth: 1,
     borderColor: ADMIN.border,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
   },
   cardHeader: {
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: ADMIN.surface,
     borderWidth: 1,
-    borderColor: '#CBD2DB',
+    borderColor: ADMIN.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -742,13 +742,15 @@ const styles = StyleSheet.create({
   pagerButtons: { flexDirection: 'row', gap: 8 },
 
   // dialog
-  overlay: { flex: 1, backgroundColor: 'rgba(17,24,39,0.55)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   dialog: {
     width: '100%',
     maxWidth: 520,
     maxHeight: '88%',
     backgroundColor: ADMIN.surface,
-    borderRadius: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: ADMIN.border,
     overflow: 'hidden',
   },
   dialogHeader: {
@@ -786,7 +788,7 @@ const styles = StyleSheet.create({
   chartCaptionStrong: { color: ADMIN.text, fontWeight: '800' },
   chart: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, borderBottomWidth: 1, borderBottomColor: ADMIN.border },
   barSlot: { flex: 1, height: '100%', justifyContent: 'flex-end', minHeight: 44 },
-  bar: { width: '100%', backgroundColor: '#C98B8B', borderTopLeftRadius: 4, borderTopRightRadius: 4 },
+  bar: { width: '100%', backgroundColor: '#E66A86', borderTopLeftRadius: 4, borderTopRightRadius: 4 },
   barOn: { backgroundColor: ADMIN.brand },
   barEmpty: { backgroundColor: ADMIN.border },
   axis: { flexDirection: 'row', gap: 4, marginTop: 6 },
