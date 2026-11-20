@@ -173,6 +173,31 @@ function Memberships({ onNotice }) {
   );
 }
 
+// Saves / toggles a plan. Whole objects are passed in so that screen handlers
+// never read a field of something that may still be empty.
+async function savePlan(plan, form) {
+  const amount = Number(form.amount);
+  if (!Number.isInteger(amount) || amount < 1) {
+    return { ok: false, message: 'Enter the price as a whole number of pesos, for example 1000.' };
+  }
+  const res = await rpc('admin_update_plan', {
+    p_plan_id: plan.plan_id,
+    p_name: form.name,
+    p_amount: amount,
+    p_description: form.description,
+  });
+  return res.ok
+    ? { ok: true, text: `Saved ${form.name.trim()}. The new details apply to new purchases.` }
+    : { ok: false, message: res.message };
+}
+
+async function togglePlan(plan) {
+  const res = await rpc('admin_update_plan', { p_plan_id: plan.plan_id, p_is_active: !plan.is_active });
+  return res.ok
+    ? { ok: true, text: plan.is_active ? `${plan.name} is hidden from new members.` : `${plan.name} is on sale again.` }
+    : { ok: false, message: res.message };
+}
+
 // ---- Plans tab ----------------------------------------------------------------
 function Plans({ onNotice }) {
   const [state, setState] = useState({ plans: [], error: '', loading: true });
@@ -200,44 +225,29 @@ function Plans({ onNotice }) {
   };
 
   const save = async () => {
-    const amount = Number(form.amount);
-    if (!Number.isInteger(amount) || amount < 1) {
-      setFormError('Enter the price as a whole number of pesos, for example 1000.');
-      return;
-    }
     setBusy(true);
     setFormError('');
-    const res = await rpc('admin_update_plan', {
-      p_plan_id: editing.plan_id,
-      p_name: form.name,
-      p_amount: amount,
-      p_description: form.description,
-    });
+    const result = await savePlan(editing, form);
     setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
+    if (!result.ok) {
+      setFormError(result.message);
       return;
     }
     setEditing(null);
-    onNotice(`Saved ${form.name.trim()}. The new details apply to new purchases.`);
+    onNotice(result.text);
     load();
   };
 
   const toggle = async () => {
     setBusy(true);
-    const res = await rpc('admin_update_plan', {
-      p_plan_id: toggling.plan_id,
-      p_is_active: !toggling.is_active,
-    });
+    const result = await togglePlan(toggling);
     setBusy(false);
-    const name = toggling.name;
-    const turningOn = !toggling.is_active;
     setToggling(null);
-    if (!res.ok) {
-      setState((s) => ({ ...s, error: res.message }));
+    if (!result.ok) {
+      setState((s) => ({ ...s, error: result.message }));
       return;
     }
-    onNotice(turningOn ? `${name} is on sale again.` : `${name} is hidden from new members.`);
+    onNotice(result.text);
     load();
   };
 

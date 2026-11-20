@@ -12,6 +12,37 @@ const QUICK_DAYS = [
   { key: '90', label: '90 days' },
 ];
 
+// These take the whole membership object as a parameter, so the screen's
+// buttons never reach into a value that may still be empty.
+async function extendMembership(subscription, count) {
+  const res = await rpc('admin_extend_subscription', {
+    p_subscription_id: subscription.subscription_id,
+    p_days: count,
+  });
+  if (!res.ok) return { ok: false, message: res.message };
+  const who = subscription.member_name || 'the member';
+  return {
+    ok: true,
+    text: `Added ${count} day${count === 1 ? '' : 's'} to ${who}’s membership. It now ends on ${formatDate(res.data.ends)}.`,
+  };
+}
+
+async function cancelMembership(subscription, reason) {
+  const res = await rpc('admin_cancel_subscription', {
+    p_subscription_id: subscription.subscription_id,
+    p_reason: reason.trim() || null,
+  });
+  if (!res.ok) return { ok: false, message: res.message };
+  const who = subscription.member_name || 'the member';
+  return {
+    ok: true,
+    text:
+      subscription.status === 'pending'
+        ? `Released ${who}’s reservation.`
+        : `Ended ${who}’s membership. No refund was issued automatically.`,
+  };
+}
+
 // Extend / cancel a membership. Used by the Subscriptions screen and the member page.
 //   subscription: { subscription_id, member_name, plan_name, status, end_date }
 //   onResult({ ok, text }) is called after a change went through, so the screen can
@@ -45,44 +76,27 @@ export function useMembershipActions(onResult) {
     }
     setBusy(true);
     setError('');
-    const res = await rpc('admin_extend_subscription', {
-      p_subscription_id: extending.subscription_id,
-      p_days: count,
-    });
+    const result = await extendMembership(extending, count);
     setBusy(false);
-    if (!res.ok) {
-      setError(res.message);
+    if (!result.ok) {
+      setError(result.message);
       return;
     }
-    const who = extending.member_name || 'the member';
     setExtending(null);
-    onResult({
-      ok: true,
-      text: `Added ${count} day${count === 1 ? '' : 's'} to ${who}’s membership. It now ends on ${formatDate(res.data.ends)}.`,
-    });
+    onResult({ ok: true, text: result.text });
   };
 
   const submitCancel = async () => {
     setBusy(true);
     setError('');
-    const res = await rpc('admin_cancel_subscription', {
-      p_subscription_id: cancelling.subscription_id,
-      p_reason: reason.trim() || null,
-    });
+    const result = await cancelMembership(cancelling, reason);
     setBusy(false);
-    if (!res.ok) {
-      setError(res.message);
+    if (!result.ok) {
+      setError(result.message);
       return;
     }
-    const who = cancelling.member_name || 'the member';
-    const wasPending = cancelling.status === 'pending';
     setCancelling(null);
-    onResult({
-      ok: true,
-      text: wasPending
-        ? `Released ${who}’s reservation.`
-        : `Ended ${who}’s membership. No refund was issued automatically.`,
-    });
+    onResult({ ok: true, text: result.text });
   };
 
   const extendCount = Number(days);

@@ -291,6 +291,20 @@ export function EmptyState({ icon = 'tray-remove', title, text }) {
 }
 
 // ---- table / cards ------------------------------------------------------------
+// The clickable layer of a table row. It sits BEHIND the row's content instead of
+// wrapping it, so a row can hold its own buttons (Extend, End...) without putting
+// a button inside a button, which browsers do not allow.
+function RowHit({ onPress, round }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Open details"
+      style={({ hovered }) => [styles.rowHit, round && styles.rowHitRound, hovered && styles.hover]}
+    />
+  );
+}
+
 // columns: [{ key, title, flex, align, render(row), primary, badge, actions, hideOnCard }]
 //   Wide screen: a normal table.
 //   Phone: each row is a card. `primary` is the card title, `badge` sits at its
@@ -327,22 +341,22 @@ export function DataTable({ columns, rows, keyOf, onRowPress, loading, emptyTitl
           ))}
         </View>
         {rows.map((row) => (
-          <Pressable
-            key={keyOf(row)}
-            onPress={onRowPress ? () => onRowPress(row) : undefined}
-            disabled={!onRowPress}
-            accessibilityRole={onRowPress ? 'button' : undefined}
-            style={({ hovered }) => [styles.tr, hovered && !!onRowPress && styles.hover]}
-          >
+          <View key={keyOf(row)} style={styles.tr}>
+            {!!onRowPress && <RowHit onPress={() => onRowPress(row)} />}
             {columns.map((column) => (
               <View
                 key={column.key}
-                style={[styles.td, { flex: column.flex ?? 1 }, column.align === 'right' && styles.tdRight]}
+                style={[
+                  styles.td,
+                  { flex: column.flex ?? 1 },
+                  column.align === 'right' && styles.tdRight,
+                  column.actions ? styles.passThrough : styles.inert,
+                ]}
               >
                 {cell(column, row)}
               </View>
             ))}
-          </Pressable>
+          </View>
         ))}
       </View>
     );
@@ -356,25 +370,22 @@ export function DataTable({ columns, rows, keyOf, onRowPress, loading, emptyTitl
   return (
     <View style={loading ? styles.dim : null}>
       {rows.map((row) => (
-        <Pressable
-          key={keyOf(row)}
-          onPress={onRowPress ? () => onRowPress(row) : undefined}
-          disabled={!onRowPress}
-          accessibilityRole={onRowPress ? 'button' : undefined}
-          style={[styles.card, styles.rowCard]}
-        >
-          <View style={styles.rowCardTop}>
-            <View style={styles.flex1}>{cell(primary, row)}</View>
-            {!!badge && <View>{cell(badge, row)}</View>}
-          </View>
-          {lines.map((column) => (
-            <View key={column.key} style={styles.rowCardLine}>
-              <Text style={styles.rowCardLabel}>{column.title}</Text>
-              <View style={styles.rowCardValue}>{cell(column, row)}</View>
+        <View key={keyOf(row)} style={[styles.card, styles.rowCard]}>
+          {!!onRowPress && <RowHit onPress={() => onRowPress(row)} round />}
+          <View style={styles.inert}>
+            <View style={styles.rowCardTop}>
+              <View style={styles.flex1}>{cell(primary, row)}</View>
+              {!!badge && <View>{cell(badge, row)}</View>}
             </View>
-          ))}
+            {lines.map((column) => (
+              <View key={column.key} style={styles.rowCardLine}>
+                <Text style={styles.rowCardLabel}>{column.title}</Text>
+                <View style={styles.rowCardValue}>{cell(column, row)}</View>
+              </View>
+            ))}
+          </View>
           {!!actions && <View style={styles.rowCardActions}>{cell(actions, row)}</View>}
-        </Pressable>
+        </View>
       ))}
     </View>
   );
@@ -480,7 +491,8 @@ export function BarChart({ data, height = 170, formatValue, formatLabel }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const step = Math.max(1, Math.ceil(data.length / 8));
   const index = picked !== null && picked < data.length ? picked : data.length - 1;
-  const current = data[index];
+  // Never empty, so drawing a chart with no data cannot crash.
+  const current = data[index] ?? { label: '', value: 0 };
   const labelOf = (d) => (formatLabel ? formatLabel(d.label) : d.label);
   const valueOf = (v) => (formatValue ? formatValue(v) : String(v));
 
@@ -711,6 +723,12 @@ const styles = StyleSheet.create({
   td: { justifyContent: 'center' },
   tdRight: { alignItems: 'flex-end' },
   tdText: { color: ADMIN.text, fontSize: 14 },
+  rowHit: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  rowHitRound: { borderRadius: 12 },
+  // Row content lets clicks fall through to the layer behind it; only the
+  // action buttons (passThrough) catch their own clicks.
+  inert: { pointerEvents: 'none' },
+  passThrough: { pointerEvents: 'box-none' },
 
   rowCard: { padding: 14 },
   rowCardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 6 },

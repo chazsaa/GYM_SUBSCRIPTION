@@ -9,6 +9,16 @@ import { ADMIN } from '../../theme/adminTheme';
 
 const KEYS = ['gym_name', 'address', 'phone', 'email', 'hours_weekdays', 'hours_weekends', 'capacity', 'announcement'];
 
+// Compares the form with what is saved. Returns the changed fields, or a message.
+const diffGym = (form, saved) => {
+  if (!form.gym_name.trim()) return { problem: 'Enter the gym name.' };
+  return {
+    changes: Object.fromEntries(
+      KEYS.filter((k) => form[k].trim() !== saved[k]).map((k) => [k, form[k].trim()])
+    ),
+  };
+};
+
 // Gym details and settings. The details are saved in the database (gym_info table)
 // so they can be shown to members later without a new app release.
 export default function Gym() {
@@ -67,13 +77,13 @@ export default function Gym() {
   const changed = form && saved && KEYS.some((k) => form[k].trim() !== saved[k]);
 
   const save = async () => {
-    if (!form.gym_name.trim()) {
-      setFieldError('Enter the gym name.');
+    const { problem, changes } = diffGym(form, saved);
+    if (problem) {
+      setFieldError(problem);
       return;
     }
     setFieldError('');
     setSaving(true);
-    const changes = Object.fromEntries(KEYS.filter((k) => form[k].trim() !== saved[k]).map((k) => [k, form[k].trim()]));
     const res = await rpc('admin_save_gym_info', { p_values: changes });
     setSaving(false);
     if (!res.ok) {

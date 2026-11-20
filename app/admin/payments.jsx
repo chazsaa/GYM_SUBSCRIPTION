@@ -110,6 +110,10 @@ export default function Payments() {
     load();
   };
 
+  // Read nullable values here, not inside button handlers: the React Compiler
+  // evaluates what a handler uses every time the screen draws.
+  const selectedMemberId = selected?.member_id;
+
   const needle = search.trim().toLowerCase();
   const waiting = pending.filter(
     (p) =>
@@ -273,9 +277,8 @@ export default function Payments() {
               label="View member"
               kind="secondary"
               onPress={() => {
-                const id = selected.member_id;
                 setSelected(null);
-                router.push(`/admin/members/${id}`);
+                router.push(`/admin/members/${selectedMemberId}`);
               }}
             />
             <Btn label="Close" onPress={() => setSelected(null)} />
