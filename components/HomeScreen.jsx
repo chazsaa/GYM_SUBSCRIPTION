@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PlanCard from './PlanCard';
 import ConfirmDialog from './ConfirmDialog';
@@ -17,8 +17,15 @@ import { BRAND } from '../constants/brand';
 const HomeScreen = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { plans } = usePlans();
+  const { plans, refreshPlans } = usePlans();
   const { gymInfo } = useGymInfo();
+
+  // Show current plans and prices each time the member opens Home.
+  useFocusEffect(
+    useCallback(() => {
+      refreshPlans();
+    }, [refreshPlans])
+  );
   const [confirmLogout, setConfirmLogout] = useState(false);
   const firstName = user?.name ? user.name.trim().split(' ')[0] : '';
 

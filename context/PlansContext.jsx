@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { subscriptionPlans, formatPeso } from '../data/subscriptionPlans';
 
@@ -34,30 +35,38 @@ const PlansContext = createContext(null);
 
 export const PlansProvider = ({ children }) => {
   const [allPlans, setAllPlans] = useState(fallbackPlans);
+  const mounted = useRef(true);
+
+  // Reloads the plans. Used on start, when the app returns to the foreground, and
+  // by screens that must show current prices (Home, Payment).
+  const refreshPlans = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('plans').select('*').order('sort_order');
+      if (!mounted.current || error || !data || data.length === 0) return;
+      setAllPlans(data.map(fromRow));
+    } catch {
+      // No connection: keep what is already shown.
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const { data, error } = await supabase.from('plans').select('*').order('sort_order');
-        if (cancelled || error || !data || data.length === 0) return;
-        setAllPlans(data.map(fromRow));
-      } catch {
-        // No connection: keep the built-in list.
-      }
-    };
-    load();
-    // Keep member plan cards in sync when an administrator edits availability,
-    // prices, or descriptions from the Admin Console.
+    mounted.current = true;
+    refreshPlans();
+    // Live updates (needs the realtime publication from supabase/phase4_realtime.sql).
     const channel = supabase
       .channel('member-plans-live-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plans' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plans' }, refreshPlans)
       .subscribe();
+    // Fallback when realtime is off or the connection dropped while the app slept.
+    const appState = AppState.addEventListener('change', (next) => {
+      if (next === 'active') refreshPlans();
+    });
     return () => {
-      cancelled = true;
+      mounted.current = false;
+      appState.remove();
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [refreshPlans]);
 
   // Home shows only the plans that are on sale. A member can still see the plan
   // they already have, even if it was switched off later.
@@ -65,7 +74,7 @@ export const PlansProvider = ({ children }) => {
   const getPlanById = (id) => allPlans.find((plan) => String(plan.id) === String(id));
 
   return (
-    <PlansContext.Provider value={{ plans, getPlanById }}>{children}</PlansContext.Provider>
+    <PlansContext.Provider value={{ plans, getPlanById, refreshPlans }}>{children}</PlansContext.Provider>
   );
 };
 

@@ -9,7 +9,6 @@ function RootNavigator() {
   const {
     isLoggedIn,
     isAdmin,
-    isStaff,
     isMember,
     loading,
     roleLoading,
@@ -37,11 +36,6 @@ function RootNavigator() {
         <Stack.Screen name="receipt/[id]" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="change-password" />
-      </Stack.Protected>
-
-      {/* Staff */}
-      <Stack.Protected guard={isLoggedIn && isStaff}>
-        <Stack.Screen name="staff" />
       </Stack.Protected>
 
       {/* Admins */}

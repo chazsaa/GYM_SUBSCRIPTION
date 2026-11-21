@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
 
   const userId = session?.user?.id ?? null;
 
-  // Determine whether the logged-in account is admin, staff, or member.
+  // Determine whether the logged-in account is an admin or a member.
   useEffect(() => {
     if (!userId) {
       setRoleState({
@@ -89,26 +89,8 @@ export const AuthProvider = ({ children }) => {
 
     const loadRole = async () => {
       try {
-        // Preserve the existing admins table as the source of admin access.
-        const { data: adminData, error: adminError } = await supabase
-          .from('admins')
-          .select('user_id')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (adminError) throw adminError;
-
-        if (adminData) {
-          if (!cancelled) {
-            setRoleState({
-              userId,
-              role: 'admin',
-            });
-          }
-          return;
-        }
-
-        // Non-admin accounts are checked against user_roles.
+        // user_roles is the single source of truth. is_admin() on the server reads it
+        // too, so the app and the database can never disagree about who is an admin.
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
@@ -117,9 +99,15 @@ export const AuthProvider = ({ children }) => {
 
         if (roleError) throw roleError;
 
-        const role = ['staff', 'admin'].includes(roleData?.role)
-          ? roleData.role
-          : 'member';
+        // Only two roles exist: admin (a row in user_roles) and member (no row).
+        let role = roleData?.role === 'admin' ? 'admin' : 'member';
+
+        // Safety net: if the app is updated before supabase/phase4_roles.sql has been
+        // run, an admin has no user_roles row yet. Ask the server, so nobody is locked out.
+        if (role === 'member') {
+          const { data: serverSaysAdmin } = await supabase.rpc('is_admin');
+          if (serverSaysAdmin === true) role = 'admin';
+        }
 
         if (!cancelled) {
           setRoleState({
@@ -152,7 +140,6 @@ export const AuthProvider = ({ children }) => {
   const role = roleLoading ? 'member' : roleState.role;
 
   const isAdmin = !roleLoading && role === 'admin';
-  const isStaff = !roleLoading && role === 'staff';
   const isMember = !roleLoading && role === 'member';
 
   const user = session
@@ -290,7 +277,6 @@ export const AuthProvider = ({ children }) => {
     isLoggedIn: user !== null,
 
     isAdmin,
-    isStaff,
     isMember,
 
     roleLoading,

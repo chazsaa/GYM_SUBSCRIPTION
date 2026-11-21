@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -28,12 +29,18 @@ export function GymInfoProvider({ children }) {
       }
     };
     load();
+    // Live updates (needs the realtime publication from supabase/phase4_realtime.sql).
     const channel = supabase
       .channel('member-gym-info-live-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gym_info' }, load)
       .subscribe();
+    // Fallback when realtime is off or the connection dropped while the app slept.
+    const appState = AppState.addEventListener('change', (next) => {
+      if (next === 'active') load();
+    });
     return () => {
       alive = false;
+      appState.remove();
       supabase.removeChannel(channel);
     };
   }, [user?.id]);

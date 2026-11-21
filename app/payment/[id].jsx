@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import PaymentScreen from '../../components/PaymentScreen';
 import { usePlans } from '../../context/PlansContext';
@@ -7,6 +8,12 @@ import { usePlans } from '../../context/PlansContext';
 // /payment/5?mode=change    -> switch the current membership to plan 5
 export default function Payment() {
   const { id, mode } = useLocalSearchParams();
-  const { getPlanById } = usePlans();
+  const { getPlanById, refreshPlans } = usePlans();
+
+  // Make sure the price on the payment screen is the current one.
+  useEffect(() => {
+    refreshPlans();
+  }, [refreshPlans]);
+
   return <PaymentScreen plan={getPlanById(id)} id={id} mode={mode} />;
 }

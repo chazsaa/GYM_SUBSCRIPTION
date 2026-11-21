@@ -106,7 +106,7 @@ export default function Reports() {
             <StatCard label="Revenue" value={formatPeso(r.revenue_total)} icon="cash-multiple" tone="success" />
             <StatCard label="Payments received" value={r.paid_count} hint={`Average ${formatPeso(r.average_payment)}`} icon="receipt-text-outline" tone="brand" />
             <StatCard label="New members" value={r.new_members} icon="account-plus-outline" tone="info" />
-            <StatCard label="Memberships ended early" value={r.cancellations} hint="Cancelled by member or admin" icon="account-cancel-outline" tone="danger" />
+            <StatCard label="Memberships ended early" value={r.cancellations} hint={`Paid memberships ended · ${r.released_reservations ?? 0} unpaid reservations released`} icon="account-cancel-outline" tone="danger" />
           </Grid>
 
           <Card

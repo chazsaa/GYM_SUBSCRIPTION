@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -32,9 +32,7 @@ function formatTime(value) {
   });
 }
 
-export default function StaffAttendance() {
-  const router = useRouter();
-
+export default function AdminAttendance() {
   const [search, setSearch] = useState('');
   const [offset, setOffset] = useState(0);
 
@@ -77,7 +75,7 @@ export default function StaffAttendance() {
       error: '',
     }));
 
-    const res = await rpc('staff_attendance_list', {
+    const res = await rpc('admin_attendance_list', {
       p_search: debounced || null,
       p_limit: PAGE_SIZE,
       p_offset: offset,
@@ -120,7 +118,7 @@ export default function StaffAttendance() {
       error: '',
     }));
 
-    const res = await rpc('staff_members', {
+    const res = await rpc('admin_members', {
       p_search: debouncedMemberSearch || null,
       p_status: 'active',
       p_limit: 100,
@@ -146,9 +144,10 @@ export default function StaffAttendance() {
   }, [debouncedMemberSearch]);
 
   useEffect(() => {
-    if (dialog.visible && dialog.type === 'checkin') {
-      loadEligibleMembers();
-    }
+    if (!(dialog.visible && dialog.type === 'checkin')) return undefined;
+    // Start the load on the next tick so the effect itself does not set state.
+    const timer = setTimeout(loadEligibleMembers, 0);
+    return () => clearTimeout(timer);
   }, [dialog.visible, dialog.type, loadEligibleMembers]);
 
   const openCheckIn = () => {
@@ -213,11 +212,11 @@ export default function StaffAttendance() {
     let res;
 
     if (dialog.type === 'checkin') {
-      res = await rpc('staff_attendance_check_in', {
+      res = await rpc('admin_attendance_check_in', {
         p_user_id: selectedMember.user_id,
       });
     } else {
-      res = await rpc('staff_attendance_check_out', {
+      res = await rpc('admin_attendance_check_out', {
         p_attendance_id: dialog.row.id,
       });
     }
@@ -284,15 +283,10 @@ export default function StaffAttendance() {
 
   return (
     <Page
-      title="Attendance Monitoring"
+      title="Attendance"
       subtitle="View member attendance and manage gym check-ins and check-outs."
       actions={
         <>
-          <Btn
-            label="Back"
-            kind="secondary"
-            onPress={() => router.back()}
-          />
           <Btn
             label="Refresh"
             kind="secondary"

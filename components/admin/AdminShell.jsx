@@ -28,6 +28,7 @@ export const ADMIN_NAV = [
     group: 'Manage',
     items: [
       { label: 'Members', href: '/admin/members', icon: 'account-group-outline' },
+      { label: 'Attendance', href: '/admin/attendance', icon: 'clipboard-check-outline' },
       { label: 'Subscriptions', href: '/admin/subscriptions', icon: 'card-account-details-outline' },
       { label: 'Payments', href: '/admin/payments', icon: 'cash-multiple' },
       { label: 'Gym', href: '/admin/gym', icon: 'dumbbell' },
