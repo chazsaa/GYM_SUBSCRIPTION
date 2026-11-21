@@ -10,7 +10,6 @@ export const planImages = {
   4: require('../assets/image/plans/plan-4.jpg'),
   5: require('../assets/image/plans/plan-5.jpg'),
 };
-export const bannerImage = require('../assets/image/plans/banner.jpg');
 
 export const subscriptionPlans = [
   {
@@ -127,6 +126,5 @@ export const getPlanById = (id) => {
 export const formatPeso = (amount) =>
   '₱' + String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-// The photo for a plan. A plan added later in the database, with no photo yet,
-// shows the banner photo instead.
-export const getPlanImage = (id) => planImages[id] ?? bannerImage;
+// The photo for a plan. Plans without a bundled photo simply have no image.
+export const getPlanImage = (id) => planImages[id] ?? null;

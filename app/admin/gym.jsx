@@ -1,4 +1,6 @@
 import React, { useCallback, useState } from 'react';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Page, Card, Field, Btn, Banner, Loading, Pill, DetailRow, useIsWide } from '../../components/admin/ui';
@@ -8,6 +10,7 @@ import { formatDateTime } from '../../context/SubscriptionContext';
 import { ADMIN } from '../../theme/adminTheme';
 
 const KEYS = ['gym_name', 'address', 'phone', 'email', 'hours_weekdays', 'hours_weekends', 'capacity', 'announcement'];
+const MEDIA_BUCKET = 'gym-media';
 
 // Compares the form with what is saved. Returns the changed fields, or a message.
 const diffGym = (form, saved) => {
@@ -32,6 +35,8 @@ export default function Gym() {
   const [notice, setNotice] = useState('');
   const [fieldError, setFieldError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [bannerBusy, setBannerBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +62,7 @@ export default function Gym() {
       setSaved(values);
       setUpdatedAt(latest);
       setMode(settings.data?.value ?? 'simulated');
+      setBannerUrl(info.data.find((row) => row.key === 'banner_url')?.value || '');
       setError('');
     } catch {
       setError('Could not connect. Check your internet and try again.');
@@ -75,6 +81,72 @@ export default function Gym() {
   };
 
   const changed = form && saved && KEYS.some((k) => form[k].trim() !== saved[k]);
+
+  const chooseBanner = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError('Allow GymFit to access your photos to choose a banner.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.85,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+
+    setBannerBusy(true);
+    setError('');
+    try {
+      const asset = result.assets[0];
+      const previousUrl = bannerUrl;
+      const response = await fetch(asset.uri);
+      const imageData = await response.arrayBuffer();
+      const extension = (asset.fileName?.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `banners/${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from(MEDIA_BUCKET).upload(path, imageData, {
+        contentType: asset.mimeType || 'image/jpeg', upsert: false,
+      });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+      const resultSave = await supabase.rpc('admin_set_banner_url', { p_url: data.publicUrl });
+      if (resultSave.error) {
+        await supabase.storage.from(MEDIA_BUCKET).remove([path]);
+        throw resultSave.error;
+      }
+      setBannerUrl(data.publicUrl);
+      if (previousUrl) {
+        const marker = `/storage/v1/object/public/${MEDIA_BUCKET}/`;
+        const oldIndex = previousUrl.indexOf(marker);
+        if (oldIndex >= 0) {
+          const oldPath = decodeURIComponent(previousUrl.slice(oldIndex + marker.length).split('?')[0]);
+          if (oldPath !== path) await supabase.storage.from(MEDIA_BUCKET).remove([oldPath]);
+        }
+      }
+      setNotice('Banner uploaded and published to the member Home screen.');
+    } catch (e) {
+      setError(e?.message || 'Could not upload the banner.');
+    } finally { setBannerBusy(false); }
+  };
+
+  const removeBanner = async () => {
+    if (!bannerUrl || bannerBusy) return;
+    setBannerBusy(true);
+    setError('');
+    try {
+      const marker = `/storage/v1/object/public/${MEDIA_BUCKET}/`;
+      const index = bannerUrl.indexOf(marker);
+      const path = index >= 0 ? decodeURIComponent(bannerUrl.slice(index + marker.length).split('?')[0]) : null;
+      const { error: saveError } = await supabase.rpc('admin_set_banner_url', { p_url: '' });
+      if (saveError) throw saveError;
+      setBannerUrl('');
+      if (path) {
+        const { error: removeError } = await supabase.storage.from(MEDIA_BUCKET).remove([path]);
+        if (removeError) console.warn('Banner was unpublished, but the old file could not be deleted:', removeError.message);
+      }
+      setNotice('Banner removed. It will no longer appear on the member Home screen.');
+    } catch (e) {
+      setError(e?.message || 'Could not remove the banner.');
+    } finally { setBannerBusy(false); }
+  };
 
   const save = async () => {
     const { problem, changes } = diffGym(form, saved);
@@ -131,6 +203,14 @@ export default function Gym() {
             <Field label="Capacity (people at the same time)" value={form.capacity} onChangeText={set('capacity')} keyboardType="number-pad" maxLength={6} />
           </Card>
 
+          <Card title="Home banner" subtitle="Optional image shown on the member Home screen. No image is displayed until you upload one.">
+            {!!bannerUrl && <Image source={{ uri: bannerUrl }} contentFit="cover" style={styles.bannerPreview} />}
+            <View style={styles.cta}>
+              <Btn label={bannerUrl ? 'Replace banner' : 'Upload banner'} icon="image-plus" onPress={chooseBanner} loading={bannerBusy} />
+              {!!bannerUrl && <Btn label="Remove banner" icon="delete-outline" kind="danger" onPress={removeBanner} disabled={bannerBusy} />}
+            </View>
+          </Card>
+
           <Card title="Announcement" subtitle="A short notice for members, such as a holiday closing">
             <Field label="Announcement" value={form.announcement} onChangeText={set('announcement')} multiline maxLength={500} hint={`${form.announcement.length} / 500`} style={styles.noMargin} />
           </Card>
@@ -169,6 +249,7 @@ const styles = StyleSheet.create({
   pairWide: { flexDirection: 'row', gap: 14 },
   half: { flex: 1 },
   noMargin: { marginBottom: 0 },
+  bannerPreview: { width: '100%', height: 180, borderRadius: 12, marginBottom: 12 },
   updated: { color: ADMIN.textMuted, fontSize: 12, marginBottom: 16 },
   help: { color: ADMIN.textMuted, fontSize: 13, lineHeight: 19, marginTop: 10 },
   cta: { marginTop: 14, alignItems: 'flex-start' },

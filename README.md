@@ -50,7 +50,7 @@ Join our community of developers creating universal apps.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 ## GymFit Admin Console update
 
-The Admin Console now uses the gym photograph at `assets/image/banner.jpg` as its background, with a dark overlay, translucent panels, and crimson accents. The member home screen also reads the saved gym information from Supabase and displays the available contact, hours, capacity, and announcement details. Membership plan and gym information updates listen for Supabase Realtime changes when those tables are enabled for Realtime.
+The Admin Console uses a solid near-black background (`ADMIN.bg`) with dark panels and crimson accents; it does not use a gym photograph as its background. The optional Home banner is managed separately in Admin > Gym and is displayed on the member Home screen only when an Admin uploads one. The member home screen also reads saved gym information from Supabase and displays available contact, hours, capacity, and announcement details. Membership plan and gym information updates listen for Supabase Realtime changes when those tables are enabled for Realtime.
 
 ### Local setup
 

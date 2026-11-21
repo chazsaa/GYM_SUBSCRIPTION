@@ -1,5 +1,5 @@
 // Admin-only dark glass theme inspired by TrackandfieldStore's Night Stadium UI.
-// The actual dashboard backdrop is GymFit's own banner.jpg photograph.
+// The Admin Dashboard uses a clean theme background; uploaded member banners are separate.
 export const ADMIN = {
   bg: '#0B090C', surface: 'rgba(16, 13, 18, 0.82)', surfaceAlt: 'rgba(255, 255, 255, 0.055)',
   border: 'rgba(255, 255, 255, 0.13)', text: '#F6F4F2', textMuted: 'rgba(246, 244, 242, 0.72)',

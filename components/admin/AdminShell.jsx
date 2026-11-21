@@ -4,7 +4,6 @@ import { usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import {
-  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -179,12 +178,7 @@ export default function AdminShell({ children }) {
 
   if (wide) {
     return (
-      <ImageBackground
-        source={require('../../assets/image/banner.jpg')}
-        style={styles.root}
-        imageStyle={styles.backgroundImage}
-      >
-        <View pointerEvents="none" style={styles.backgroundScrim} />
+      <View style={styles.root}>
         <StatusBar style="light" />
 
         <View style={styles.sidebarWrap}>
@@ -197,18 +191,13 @@ export default function AdminShell({ children }) {
 
         <View style={styles.main}>{children}</View>
         {logoutDialog}
-      </ImageBackground>
+      </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.phoneRoot} edges={['top']}>
-      <ImageBackground
-        source={require('../../assets/image/banner.jpg')}
-        style={styles.phoneBackground}
-        imageStyle={styles.backgroundImage}
-      >
-        <View pointerEvents="none" style={styles.backgroundScrim} />
+      <View style={styles.phoneBackground}>
         <StatusBar style="light" />
 
         <View style={styles.topBar}>
@@ -260,7 +249,7 @@ export default function AdminShell({ children }) {
         )}
 
         {logoutDialog}
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -270,13 +259,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     backgroundColor: ADMIN.bg,
-  },
-  backgroundImage: {
-    resizeMode: 'cover',
-  },
-  backgroundScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5, 4, 7, 0.72)',
   },
   main: {
     flex: 1,

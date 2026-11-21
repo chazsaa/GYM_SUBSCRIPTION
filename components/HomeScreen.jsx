@@ -9,14 +9,13 @@ import ConfirmDialog from './ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
 import { usePlans } from '../context/PlansContext';
 import { useGymInfo } from '../context/GymInfoContext';
-import { bannerImage } from '../data/subscriptionPlans';
-import { COLORS, SHADES } from '../theme/colors';
+import { COLORS } from '../theme/colors';
 import { BRAND } from '../constants/brand';
 
 // The GymFit Home tab. Only logged-in users can reach it.
 const HomeScreen = () => {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { plans, refreshPlans } = usePlans();
   const { gymInfo } = useGymInfo();
 
@@ -27,7 +26,6 @@ const HomeScreen = () => {
     }, [refreshPlans])
   );
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const firstName = user?.name ? user.name.trim().split(' ')[0] : '';
 
   // Plan id 3 -> opens /details/3 (file: app/details/[id].jsx)
   const handleViewDetails = (plan) => {
@@ -69,17 +67,10 @@ const HomeScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Welcome banner */}
-            <View style={styles.banner}>
-              <View style={styles.bannerText}>
-                <Text style={styles.hello}>{firstName ? `Hello, ${firstName}!` : 'Hello!'}</Text>
-                <Text style={styles.bannerTitle}>Ready to achieve your fitness goals?</Text>
-                <Text style={styles.bannerSub}>
-                  Choose a membership plan that fits your goals.
-                </Text>
-              </View>
-              <Image source={bannerImage} style={styles.bannerPhoto} contentFit="cover" transition={150} />
-            </View>
+            {/* A banner is shown only when an Admin uploads one in Gym settings. */}
+            {!!gymInfo.banner_url && (
+              <Image source={{ uri: gymInfo.banner_url }} style={styles.bannerPhoto} contentFit="cover" transition={150} />
+            )}
 
             {Object.values(gymInfo).some(Boolean) && (
               <View style={styles.gymInfoCard}>
@@ -132,28 +123,14 @@ const styles = StyleSheet.create({
   brand: { color: COLORS.text, fontSize: 17, fontWeight: '800' },
   slogan: { color: COLORS.textMuted, fontSize: 11, marginTop: 1 },
   iconButton: { padding: 9, marginLeft: 2 },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: SHADES.maroonDeep,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 22,
-    overflow: 'hidden',
-  },
   bannerPhoto: {
-    width: 120,
-    height: 120,
+    width: '100%',
+    height: 170,
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 22,
   },
-  bannerText: { flex: 1, paddingRight: 8 },
-  hello: { color: COLORS.accent, fontSize: 14, fontWeight: '800', marginBottom: 4 },
-  bannerTitle: { color: COLORS.text, fontSize: 21, fontWeight: '800', lineHeight: 27 },
-  bannerSub: { color: COLORS.textMuted, fontSize: 13, lineHeight: 18, marginTop: 8 },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'baseline',

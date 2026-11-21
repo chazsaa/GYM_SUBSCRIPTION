@@ -1,9 +1,19 @@
 
 import { Stack } from 'expo-router';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+
+import {
+  AuthProvider,
+  useAuth,
+} from '../context/AuthContext';
+
 import { GymInfoProvider } from '../context/GymInfoContext';
 import { PlansProvider } from '../context/PlansContext';
 import { SubscriptionProvider } from '../context/SubscriptionContext';
+
+// Set Login as the initial route.
+export const unstable_settings = {
+  initialRouteName: 'login',
+};
 
 function RootNavigator() {
   const {
@@ -21,6 +31,7 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+
       {/* Logged-out visitors */}
       <Stack.Protected guard={!isLoggedIn}>
         <Stack.Screen name="login" />
@@ -38,10 +49,11 @@ function RootNavigator() {
         <Stack.Screen name="change-password" />
       </Stack.Protected>
 
-      {/* Admins */}
+      {/* Admin accounts */}
       <Stack.Protected guard={isLoggedIn && isAdmin}>
         <Stack.Screen name="admin" />
       </Stack.Protected>
+
     </Stack>
   );
 }
