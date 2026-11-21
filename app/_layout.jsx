@@ -1,34 +1,36 @@
+
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
-import { PlansProvider } from '../context/PlansContext';
 import { GymInfoProvider } from '../context/GymInfoContext';
+import { PlansProvider } from '../context/PlansContext';
 import { SubscriptionProvider } from '../context/SubscriptionContext';
 
 function RootNavigator() {
-  const { isLoggedIn, isAdmin, loading, roleLoading } = useAuth();
+  const {
+    isLoggedIn,
+    isAdmin,
+    isStaff,
+    isMember,
+    loading,
+    roleLoading,
+  } = useAuth();
 
-  // Wait until the saved login is restored and we know the account's role, so
-  // neither the Login screen nor the wrong dashboard flashes on screen.
-  if (loading || (isLoggedIn && roleLoading)) return null;
+  // Wait until authentication and role detection are complete.
+  if (loading || (isLoggedIn && roleLoading)) {
+    return null;
+  }
 
-  const isMember = isLoggedIn && !isAdmin;
-
-  // Three kinds of visitor, three separate sets of screens:
-  //   logged out -> login screens
-  //   member     -> the Member app (tabs, plans, payment, receipts, profile)
-  //   admin      -> the Admin Console (app/admin/*)
-  // A screen outside the visitor's set cannot be opened, even by typing its web
-  // address: the app sends them to their own home instead.
-  // (The database enforces the same rule, so this is not the only protection.)
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      {/* Logged-out visitors */}
       <Stack.Protected guard={!isLoggedIn}>
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
         <Stack.Screen name="forgot-password" />
       </Stack.Protected>
 
-      <Stack.Protected guard={isMember}>
+      {/* Regular members */}
+      <Stack.Protected guard={isLoggedIn && isMember}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="details/[id]" />
         <Stack.Screen name="payment/[id]" />
@@ -37,7 +39,13 @@ function RootNavigator() {
         <Stack.Screen name="change-password" />
       </Stack.Protected>
 
-      <Stack.Protected guard={isAdmin}>
+      {/* Staff */}
+      <Stack.Protected guard={isLoggedIn && isStaff}>
+        <Stack.Screen name="staff" />
+      </Stack.Protected>
+
+      {/* Admins */}
+      <Stack.Protected guard={isLoggedIn && isAdmin}>
         <Stack.Screen name="admin" />
       </Stack.Protected>
     </Stack>

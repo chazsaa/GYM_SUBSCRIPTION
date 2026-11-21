@@ -1,37 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
-import Screen from './Screen';
-import Logo from './Logo';
-import FormInput from './FormInput';
-import PrimaryButton from './PrimaryButton';
+import { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../theme/colors';
+import FormInput from './FormInput';
+import Logo from './Logo';
+import PrimaryButton from './PrimaryButton';
+import Screen from './Screen';
 
 const RegisterScreen = () => {
   const router = useRouter();
   const { register } = useAuth();
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(null); // set after a successful sign up
+  const [done, setDone] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // errors is an object, for example: { email: 'Enter your email.' }
   const [errors, setErrors] = useState({});
 
-  const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const isValidEmail = (value) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleSignUp = async () => {
     if (submitting) return;
+
     const nextErrors = {};
 
-    if (!fullName.trim()) nextErrors.fullName = 'Enter your full name.';
+    if (!fullName.trim()) {
+      nextErrors.fullName = 'Enter your full name.';
+    }
 
     if (!email.trim()) {
       nextErrors.email = 'Enter your email.';
@@ -51,46 +54,69 @@ const RegisterScreen = () => {
       nextErrors.confirmPassword = 'Passwords do not match.';
     }
 
-    if (!agreed) nextErrors.agreed = 'You must agree to continue.';
+    if (!agreed) {
+      nextErrors.agreed = 'You must agree to continue.';
+    }
 
     setErrors(nextErrors);
+
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
-    // Create the account online. The new member is not logged in automatically:
-    // we show a "Registration complete" screen and they log in themselves.
-    // The password is never logged.
     setSubmitting(true);
-    const result = await register(fullName, email, password);
-    setSubmitting(false);
-    if (!result.ok) {
-      setErrors({ email: result.message });
-      return;
+
+    try {
+      const result = await register(fullName, email, password);
+
+      if (!result.ok) {
+        setErrors({ email: result.message });
+        return;
+      }
+
+      setDone({
+        needsConfirmation: result.needsConfirmation,
+      });
+    } catch (error) {
+      setErrors({
+        email: error.message || 'Registration failed. Please try again.',
+      });
+    } finally {
+      setSubmitting(false);
     }
-    setDone({ needsConfirmation: result.needsConfirmation });
   };
 
-  // Remove the error message of one field when the user edits it
   const clearError = (field) => {
-    setErrors({ ...errors, [field]: '' });
+    setErrors((previousErrors) => ({
+      ...previousErrors,
+      [field]: '',
+    }));
   };
 
+  // Navigate directly to Login instead of relying on browser history.
   const handleBackToLogin = () => {
-    router.back();
+    router.replace('/login');
   };
 
   if (done) {
     return (
       <Screen>
         <Logo />
-        <Text style={styles.welcomeTitle}>Registration Complete</Text>
+
+        <Text style={styles.welcomeTitle}>
+          Registration Complete
+        </Text>
+
         <Text style={styles.subtitle}>
           {done.needsConfirmation
             ? 'Your account has been created. Check your email for the confirmation link, then log in.'
             : 'Your account has been created. Log in with your email and password to continue.'}
         </Text>
-        <PrimaryButton label="GO TO LOGIN" onPress={handleBackToLogin} />
+
+        <PrimaryButton
+          label="GO TO LOGIN"
+          onPress={handleBackToLogin}
+        />
       </Screen>
     );
   }
@@ -101,7 +127,10 @@ const RegisterScreen = () => {
       <Logo />
 
       {/* Title */}
-      <Text style={styles.welcomeTitle}>Create Account</Text>
+      <Text style={styles.welcomeTitle}>
+        Create Account
+      </Text>
+
       <Text style={styles.subtitle}>
         Sign up to start tracking your membership and workouts.
       </Text>
@@ -150,7 +179,9 @@ const RegisterScreen = () => {
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
             accessibilityRole="button"
-            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            accessibilityLabel={
+              showPassword ? 'Hide password' : 'Show password'
+            }
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {showPassword ? (
@@ -176,9 +207,15 @@ const RegisterScreen = () => {
         autoCapitalize="none"
         rightElement={
           <TouchableOpacity
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            onPress={() =>
+              setShowConfirmPassword(!showConfirmPassword)
+            }
             accessibilityRole="button"
-            accessibilityLabel={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+            accessibilityLabel={
+              showConfirmPassword
+                ? 'Hide confirm password'
+                : 'Show confirm password'
+            }
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {showConfirmPassword ? (
@@ -203,14 +240,24 @@ const RegisterScreen = () => {
         }}
       >
         <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
-          {agreed && <Text style={styles.checkboxMark}>✓</Text>}
+          {agreed && (
+            <Text style={styles.checkboxMark}>✓</Text>
+          )}
         </View>
+
         <Text style={styles.termsText}>
-          I agree to the <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
+          I agree to the{' '}
+          <Text style={styles.termsLink}>Terms of Service</Text>
+          {' '}and{' '}
           <Text style={styles.termsLink}>Privacy Policy</Text>
         </Text>
       </TouchableOpacity>
-      {!!errors.agreed && <Text style={styles.errorText}>{errors.agreed}</Text>}
+
+      {!!errors.agreed && (
+        <Text style={styles.errorText}>
+          {errors.agreed}
+        </Text>
+      )}
 
       {/* Sign Up Button */}
       <PrimaryButton
@@ -221,9 +268,14 @@ const RegisterScreen = () => {
 
       {/* Login Redirect */}
       <View style={styles.bottomLinkContainer}>
-        <Text style={styles.bottomLinkText}>Already have an account? </Text>
+        <Text style={styles.bottomLinkText}>
+          Already have an account?{' '}
+        </Text>
+
         <TouchableOpacity onPress={handleBackToLogin}>
-          <Text style={styles.bottomLinkAction}>Login</Text>
+          <Text style={styles.bottomLinkAction}>
+            Login
+          </Text>
         </TouchableOpacity>
       </View>
     </Screen>
